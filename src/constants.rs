@@ -17,5 +17,10 @@ pub mod layout {
     /// 上下文切换数据存储虚拟地址
     pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
 
+    pub const GUEST_START_PA: usize = 0x8800_0000;
+    pub const GUEST_START_VA: usize = 0x8000_0000;
+
+    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024;
+
     pub use crate::board::MMIO;
 }

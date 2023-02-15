@@ -35,6 +35,16 @@ use constants::layout::TRAMPOLINE;
 use constants::PAGE_SIZE;
 use riscv::register::{ hedeleg, hideleg, hvip, stvec };
 
+use crate::{mm::MemorySet, constants::layout::GUEST_DEFAULT_SIZE, page_table::{PageTableSv39, VirtPageNum}};
+
+#[link_section = ".initrd"]
+#[cfg(feature = "embed_guest_kernel")]
+static GUEST: [u8;include_bytes!("../guest.bin").len()] = 
+ *include_bytes!("../guest.bin");
+
+ #[cfg(not(feature = "embed_guest_kernel"))]
+ static GUEST: [u8; 0] = [];
+
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
 
@@ -125,9 +135,16 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         unsafe{ initialize_hypervisor() };
         // initialize heap
         hyp_alloc::heap_init();
-        mm::enable_paging();
+
+        // create guest memory set
+        let gpm = MemorySet::<PageTableSv39>::new_guest_kernel(&GUEST, GUEST_DEFAULT_SIZE);
+        hdebug!("{:#x} -> {:#x}", TRAMPOLINE >> 12, gpm.translate(VirtPageNum::from(TRAMPOLINE >> 12)).unwrap().ppn().0);
+        // hypervisor enable paging
+        mm::enable_paging(&gpm);
+        // trap init
         trap::init();
         mm::remap_test();
+
         unreachable!()
     }else{
         unreachable!()

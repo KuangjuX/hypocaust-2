@@ -11,7 +11,8 @@ GDB			:= gdb-multiarch
 FS_IMG 		:= fs.img
 
 # 客户操作系统
-GUEST_KERNEL_ELF	:= ./guest_kernel
+GUEST_KERNEL_ELF	:= minikernel 
+GUEST 				:= guest.bin
 
 GUEST_KERNEL_FEATURE:=$(if $(GUEST_KERNEL_ELF), --features embed_guest_kernel, )
 
@@ -27,6 +28,8 @@ QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 
 
+$(GUEST):
+	cd guest && make build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
 
 
 $(GUEST_KERNEL_ELF):
@@ -34,8 +37,9 @@ $(GUEST_KERNEL_ELF):
 	cd minikernel && cargo build && cp target/$(TARGET)/$(MODE)/minikernel ../guest_kernel
 
 
-build: 
-	cargo build $(GUEST_KERNEL_FEATURE)
+build: $(GUEST)
+	cargo rustc --target riscv64gc-unknown-none-elf --bin hypocaust-2 \
+	$(GUEST_KERNEL_FEATURE) -- -C link-arg=-Tsrc/linker-qemu.ld -C force-frame-pointers=yes
 
 $(KERNEL_BIN): build 
 	$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
@@ -46,10 +50,9 @@ qemu: $(KERNEL_BIN)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
-	cargo clean
-	cd minikernel && cargo clean
-	cd minikernel/user && cargo clean
-	rm guest_kernel *.S $(FS_IMG)
+	cargo clean 
+	rm $(GUEST)
+	cd guest && cargo clean
 
 qemu-gdb: $(KERNEL_ELF)
 	$(QEMU) $(QEMUOPTS) -S -gdb tcp::1234
@@ -71,4 +74,3 @@ asm:
 $(FS_IMG):
 	cd minikernel && make fs-img 
 	cp minikernel/user/target/$(TARGET)/release/fs.img ./
-	# touch fs.img

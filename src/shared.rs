@@ -5,12 +5,12 @@ use spin::Mutex;
 lazy_static! {
     pub static ref SHARED_DATA: Mutex<SharedData<PageTableSv39>> = Mutex::new(
         SharedData {
-            hypervisor_memory_set: MemorySet::new_kernel()
+            hpm: MemorySet::new_kernel()
         }
     );
 }
 
 /// 多核间共享数据
 pub struct SharedData<P: PageTable> {
-    pub hypervisor_memory_set: MemorySet<P>
+    pub hpm: MemorySet<P>
 }

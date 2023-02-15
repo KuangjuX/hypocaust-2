@@ -6,7 +6,7 @@ use crate::page_table::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 use crate::page_table::{StepByOne, VPNRange, PPNRange};
 use crate::constants::{
     PAGE_SIZE,
-    layout::{ TRAMPOLINE, TRAP_CONTEXT, MMIO, MEMORY_END }
+    layout::{ TRAMPOLINE, TRAP_CONTEXT, MMIO, MEMORY_END, GUEST_START_PA, GUEST_START_VA }
 };
 use crate::shared::SHARED_DATA;
 use alloc::collections::BTreeMap;
@@ -204,89 +204,92 @@ impl<P> MemorySet<P> where P: PageTable {
         memory_set
     }
 
-    // pub fn new_guest_kernel(guest_kernel_data: &[u8]) -> Self {
-    //     let mut memory_set = Self::new_bare();
-    //     let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
-    //     let elf_header = elf.header;
-    //     let magic = elf_header.pt1.magic;
-    //     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
-    //     let ph_count = elf_header.pt2.ph_count();
-    //     // 物理内存,从 0x8800_0000 开始
-    //     // 虚拟内存,从 0x8000_0000 开始
-    //     let mut paddr = GUEST_KERNEL_PHY_START_1 as *mut u8;
-    //     let mut last_paddr = GUEST_KERNEL_PHY_START_1 as *mut u8;
-    //     for i in 0..ph_count {
-    //         let ph = elf.program_header(i).unwrap();
-    //         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
-    //             let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
-    //             let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
-    //             let mut map_perm = MapPermission { bits: 0 };
-    //             let ph_flags = ph.flags();
-    //             if ph_flags.is_read() {
-    //                 map_perm |= MapPermission::R;
-    //             }
-    //             if ph_flags.is_write() {
-    //                 map_perm |= MapPermission::W;
-    //             }
-    //             if ph_flags.is_execute() {
-    //                 map_perm |= MapPermission::X;
-    //             }
-    //             // 将内存拷贝到对应的物理内存上
-    //             unsafe{
-    //                 core::ptr::copy(guest_kernel_data.as_ptr().add(ph.offset() as usize), paddr, ph.file_size() as usize);
-    //                 let page_align_size = ((ph.mem_size() as usize + PAGE_SIZE - 1) >> 12) << 12;
-    //                 paddr = paddr.add(page_align_size);
-    //             }
+    pub fn new_guest_kernel(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
+        let mut memory_set = Self::new_bare();
+        let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
+        let elf_header = elf.header;
+        let magic = elf_header.pt1.magic;
+        assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
+        let ph_count = elf_header.pt2.ph_count();
+        // 物理内存,从 0x8800_0000 开始
+        // 虚拟内存,从 0x8000_0000 开始
+        let mut paddr = GUEST_START_PA as *mut u8;
+        let mut last_paddr = GUEST_START_PA as *mut u8;
+        for i in 0..ph_count {
+            let ph = elf.program_header(i).unwrap();
+            if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
+                let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
+                let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
+                let mut map_perm = MapPermission { bits: 0 };
+                let ph_flags = ph.flags();
+                if ph_flags.is_read() {
+                    map_perm |= MapPermission::R;
+                }
+                if ph_flags.is_write() {
+                    map_perm |= MapPermission::W;
+                }
+                if ph_flags.is_execute() {
+                    map_perm |= MapPermission::X;
+                }
+                // 将内存拷贝到对应的物理内存上
+                unsafe{
+                    core::ptr::copy(guest_kernel_data.as_ptr().add(ph.offset() as usize), paddr, ph.file_size() as usize);
+                    let page_align_size = ((ph.mem_size() as usize + PAGE_SIZE - 1) >> 12) << 12;
+                    paddr = paddr.add(page_align_size);
+                }
                 
-    //             let map_area = MapArea::new(
-    //                 start_va, 
-    //                 end_va, 
-    //                 Some(PhysAddr(last_paddr as usize)),
-    //                 Some(PhysAddr(paddr as usize)),
-    //                 MapType::Linear, 
-    //                 map_perm
-    //             );
-    //             last_paddr = paddr;
-    //             memory_set.push(map_area, None);
-    //         }
+                let map_area = MapArea::new(
+                    start_va, 
+                    end_va, 
+                    Some(PhysAddr(last_paddr as usize)),
+                    Some(PhysAddr(paddr as usize)),
+                    MapType::Linear, 
+                    map_perm
+                );
+                last_paddr = paddr;
+                memory_set.push(map_area, None);
+            }
             
-    //     }
-    //     let offset = paddr as usize - GUEST_KERNEL_PHY_START_1;
-    //     // 映射其他物理内存
-    //     memory_set.push(MapArea::new(
-    //             VirtAddr(offset + GUEST_KERNEL_VIRT_START), 
-    //             VirtAddr(GUEST_KERNEL_VIRT_END), 
-    //             Some(PhysAddr(paddr as usize)), 
-    //             Some(PhysAddr(GUEST_KERNEL_PHY_END_1)), 
-    //             MapType::Linear, 
-    //             MapPermission::R | MapPermission::W
-    //         ),
-    //         None
-    //     );
+        }
+        let offset = paddr as usize - GUEST_START_PA;
+        let guest_end_pa = GUEST_START_PA + gpm_size;
+        let guest_end_va = GUEST_START_VA + gpm_size; 
+        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
+        // 映射其他物理内存
+        memory_set.push(MapArea::new(
+                VirtAddr(offset + GUEST_START_VA), 
+                VirtAddr(guest_end_va), 
+                Some(PhysAddr(paddr as usize)), 
+                Some(PhysAddr(guest_end_pa)), 
+                MapType::Linear, 
+                MapPermission::R | MapPermission::W
+            ),
+            None
+        );
 
-    //     memory_set
-    // }
+        memory_set
+    }
 
     /// 加载客户操作系统
-    // pub fn hyper_load_guest_kernel(&mut self, guest_kernel_memory: &Self) {
-    //     for area in guest_kernel_memory.areas.iter() {
-    //         // 修改虚拟地址与物理地址相同
-    //         let ppn_range = area.ppn_range.unwrap();
-    //         let start_pa: PhysAddr = ppn_range.get_start().into();
-    //         let end_pa: PhysAddr = ppn_range.get_end().into();
-    //         let start_va: usize = start_pa.into();
-    //         let end_va: usize= end_pa.into();
-    //         let new_area = MapArea::new(
-    //             start_va.into(), 
-    //             end_va.into(), 
-    //             Some(start_pa),
-    //             Some(end_pa), 
-    //             area.map_type, 
-    //             area.map_perm
-    //         );
-    //         self.push(new_area, None);
-    //     }
-    // }
+    pub fn map_gpm(&mut self, guest_kernel_memory: &Self) {
+        for area in guest_kernel_memory.areas.iter() {
+            // 修改虚拟地址与物理地址相同
+            let ppn_range = area.ppn_range.unwrap();
+            let start_pa: PhysAddr = ppn_range.get_start().into();
+            let end_pa: PhysAddr = ppn_range.get_end().into();
+            let start_va: usize = start_pa.into();
+            let end_va: usize= end_pa.into();
+            let new_area = MapArea::new(
+                start_va.into(), 
+                end_va.into(), 
+                Some(start_pa),
+                Some(end_pa), 
+                area.map_type, 
+                area.map_perm
+            );
+            self.push(new_area, None);
+        }
+    }
 
 
     /// 激活根页表
