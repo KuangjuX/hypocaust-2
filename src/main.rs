@@ -8,6 +8,7 @@
 #![deny(warnings)]
 #![feature(naked_functions)]
 #![feature(asm_const)]
+#![feature(stdsimd)]
 
 #[macro_use]
 extern crate bitflags;
@@ -29,13 +30,18 @@ mod sync;
 mod shared;
 mod trap;
 mod mm;
+mod guest;
 
 
 use constants::layout::TRAMPOLINE;
 use constants::PAGE_SIZE;
 use riscv::register::{ hedeleg, hideleg, hvip, stvec };
 
-use crate::{mm::MemorySet, constants::layout::GUEST_DEFAULT_SIZE, page_table::{PageTableSv39, VirtPageNum}};
+use crate::mm::MemorySet;
+use crate::constants::layout::GUEST_DEFAULT_SIZE;
+use crate::page_table::{PageTableSv39, VirtPageNum};
+use crate::guest::Guest;
+use crate::shared::add_guest;
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
@@ -117,6 +123,21 @@ unsafe fn initialize_hypervisor() {
 
 }
 
+unsafe fn switch_to_guest(hgatp: usize) -> ! {
+    // hgatp: set page table for guest physical address translation
+    let hgatp = riscv::register::hgatp::Hgatp::from_bits(hgatp);
+    hgatp.write(); 
+    core::arch::riscv64::hfence_gvma_all();
+    assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
+
+    // hstatus: handle SPV change the virtualization mode to 0 after sret
+    riscv::register::hstatus::set_spv();
+
+    // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret
+    riscv::register::sstatus::set_spp(riscv::register::sstatus::SPP::Supervisor);
+    unreachable!()
+}
+
 
 #[no_mangle]
 fn hentry(hart_id: usize, dtb: usize) -> ! {
@@ -137,13 +158,20 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         hyp_alloc::heap_init();
 
         // create guest memory set
-        let gpm = MemorySet::<PageTableSv39>::new_guest_kernel(&GUEST, GUEST_DEFAULT_SIZE);
-        hdebug!("{:#x} -> {:#x}", TRAMPOLINE >> 12, gpm.translate(VirtPageNum::from(TRAMPOLINE >> 12)).unwrap().ppn().0);
+        let mut gpm = MemorySet::<PageTableSv39>::new_guest_kernel(&GUEST, GUEST_DEFAULT_SIZE);
         // hypervisor enable paging
         mm::enable_paging(&gpm);
         // trap init
         trap::init();
+
         mm::remap_test();
+
+        gpm.initialize_gpm();
+        hdebug!("{:#x} -> {:#x}", TRAMPOLINE >> 12, gpm.translate(VirtPageNum::from(TRAMPOLINE >> 12)).unwrap().ppn().0);
+
+        // 创建 guest
+        let guest = Guest::new(0, gpm);
+        add_guest(guest);
 
         unreachable!()
     }else{

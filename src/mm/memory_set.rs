@@ -270,6 +270,35 @@ impl<P> MemorySet<P> where P: PageTable {
         memory_set
     }
 
+    pub fn initialize_gpm(&mut self) {
+        self.map_trampoline();
+        self.push(
+            MapArea::new(
+                TRAP_CONTEXT.into(),
+                TRAMPOLINE.into(),
+                None,
+                None,
+                MapType::Framed,
+                MapPermission::R | MapPermission::W
+            ),
+            None,
+        );
+
+        for pair in MMIO {
+            self.push(
+                MapArea::new(
+                    (*pair).0.into(),
+                    ((*pair).0 + (*pair).1).into(),
+                    Some((*pair).0.into()),
+                    Some(((*pair).0 + (*pair).1).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ),
+                None,
+            );
+        }
+    }
+
     /// 加载客户操作系统
     pub fn map_gpm(&mut self, guest_kernel_memory: &Self) {
         for area in guest_kernel_memory.areas.iter() {
@@ -451,7 +480,7 @@ bitflags! {
 #[allow(unused)]
 pub fn remap_test() {
     let sharded_data = SHARED_DATA.lock();
-    let kernel_space = &sharded_data.hypervisor_memory_set;
+    let kernel_space = &sharded_data.hpm;
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();
     let mid_data: VirtAddr = ((sdata as usize + edata as usize) / 2).into();

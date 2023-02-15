@@ -38,8 +38,7 @@ $(GUEST_KERNEL_ELF):
 
 
 build: $(GUEST)
-	cargo rustc --target riscv64gc-unknown-none-elf --bin hypocaust-2 \
-	$(GUEST_KERNEL_FEATURE) -- -C link-arg=-Tsrc/linker-qemu.ld -C force-frame-pointers=yes
+	cargo build $(GUEST_KERNEL_FEATURE)
 
 $(KERNEL_BIN): build 
 	$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
