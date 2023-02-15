@@ -50,31 +50,35 @@ pub unsafe extern "C" fn start() -> ! {
     )
 }
 
-fn detect_h_extension() {
-    
+/// clear BSS segment
+fn clear_bss() {
+    extern "C" {
+        fn sbss();
+        fn ebss();
+    }
+    unsafe {
+        core::slice::from_raw_parts_mut(sbss as usize as *mut u8, ebss as usize - sbss as usize)
+            .fill(0);
+    }
 }
-
 
 #[no_mangle]
 fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
+        clear_bss();
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
         // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
             panic!("no HSM extension exist under current SBI environment");
-        }else{
-            hdebug!("HSM extension is available under current SBI environment");
         }
         if !detect::detect_h_extension() {
             panic!("no RISC-V hypervisor H extension current environment")
-        }else{
-            hdebug!("RISC-V hypervisor H extension is available on current environment");
         }
-        hdebug!("Hypocaust-2 > running with hardware RISC-V H OSA acceration");
-        let hedeleg = riscv::register::hedeleg::read();
-        hdebug!("hedeleg: {:#x}", hedeleg.bits());
-        
+        hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
+        // initialize heap
+        hyp_alloc::heap_init();
+        hdebug!("Heap initialize finished!");
         unreachable!()
     }else{
         unreachable!()

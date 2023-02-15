@@ -1,5 +1,6 @@
 mod address;
 mod pte;
+mod sv39;
 
 use alloc::vec::Vec;
 
@@ -36,5 +37,13 @@ pub trait PageTable: Clone {
     fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PTEFlags);
     /// unmap virt page
     fn unmap(&mut self, vpn: VirtPageNum);
+    /// page walk and renturn all walked ptes
+    fn walk_page_table(root: usize, va: usize) -> Option<PageWalk>;
+    /// translate virt page into physical page
+    fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry>;
+    /// translate virt address into physical address
+    fn translate_va(&self, va: usize) -> Option<usize>;
+    /// get page table root token
+    fn token(&self) -> usize;
     
 }
