@@ -21,6 +21,7 @@ mod constants;
 mod hyp_alloc;
 mod sync;
 mod shared;
+mod trap;
 
 
 use constants::layout::TRAMPOLINE;
