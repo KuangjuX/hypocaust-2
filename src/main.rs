@@ -13,6 +13,9 @@
 mod console;
 mod sbi;
 mod lang_items;
+mod detect;
+
+
 
 
 const BOOT_STACK_SIZE: usize = 16 * 4096;
@@ -47,6 +50,17 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
+        if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
+            panic!("no HSM extension exist under current SBI environment");
+        }else{
+            hdebug!("HSM extension is available under current SBI environment");
+        }
+        if !detect::detect_h_extension() {
+            panic!("no RISC-V hypervisor H extension current environment")
+        }else{
+            hdebug!("RISC-V hypervisor H extension is available on current environment");
+        }
+        hdebug!("Hypocaust-2 > running with hardware RISC-V H OSA acceration");
         unreachable!()
     }else{
         unreachable!()
