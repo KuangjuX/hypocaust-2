@@ -20,10 +20,13 @@ mod page_table;
 mod constants;
 mod hyp_alloc;
 mod sync;
+mod shared;
 
 
+use constants::layout::TRAMPOLINE;
+use riscv::register::{ hedeleg, hideleg, hvip, stvec };
 
-
+/// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * 4096;
 
 #[link_section = ".bss.stack"]
@@ -62,6 +65,38 @@ fn clear_bss() {
     }
 }
 
+unsafe fn initialize_hypervisor() {
+    // hedeleg: delegate some synchronous exceptions
+    // Instruction address misaligned
+    hedeleg::set_ex0();
+    // breakpoint
+    hedeleg::set_ex3();
+    // Environment call from U-mode or VU-mode 
+    hedeleg::set_ex8();
+    // Instruction page fault 
+    hedeleg::set_ex12();
+    // Load page fault 
+    hedeleg::set_ex13();
+    // Store/AMO page fault 
+    hedeleg::set_ex15();
+
+    // hideleg: delegate all interrupts
+    hideleg::set_eip();
+    hideleg::set_sip();
+    hideleg::clear_tip();
+
+    // hvip: clear all interrupts
+    hvip::clear_vseip();
+    hvip::clear_vssip();
+    hvip::clear_vstip();
+
+    // stvec: set handler
+    stvec::write(TRAMPOLINE, stvec::TrapMode::Direct);
+    assert_eq!(stvec::read().bits(), TRAMPOLINE);
+
+}
+
+
 #[no_mangle]
 fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
@@ -70,15 +105,17 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
         // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
-            panic!("no HSM extension exist under current SBI environment");
+            panic!("no HSM extension exist on current SBI environment");
         }
         if !detect::detect_h_extension() {
-            panic!("no RISC-V hypervisor H extension current environment")
+            panic!("no RISC-V hypervisor H extension on current environment")
         }
         hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
         // initialize heap
         hyp_alloc::heap_init();
         hdebug!("Heap initialize finished!");
+        unsafe{ initialize_hypervisor() };
+        hdebug!("Initialize hypervisor environment");
         unreachable!()
     }else{
         unreachable!()
