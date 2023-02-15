@@ -1,6 +1,6 @@
 mod memory_set;
 
-pub use memory_set::{MemorySet, MapArea, remap_test};
+pub use memory_set::{MemorySet, MapArea, remap_test, MapPermission};
 
 use crate::{shared::SHARED_DATA, page_table::PageTableSv39};
 

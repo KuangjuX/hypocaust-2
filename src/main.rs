@@ -31,6 +31,7 @@ mod shared;
 mod trap;
 mod mm;
 mod guest;
+mod hypervisor;
 
 
 use constants::layout::TRAMPOLINE;
