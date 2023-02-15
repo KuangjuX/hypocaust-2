@@ -5,7 +5,8 @@ mod sv39;
 use alloc::vec::Vec;
 
 pub use pte::{ PTEFlags, PageTableEntry };
-pub use address::{ PhysPageNum, VirtPageNum, PhysAddr, VirtAddr };
+pub use address::{ PhysPageNum, VirtPageNum, PhysAddr, VirtAddr, StepByOne, VPNRange, PPNRange };
+pub use sv39::PageTableSv39;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PageTableLevel {

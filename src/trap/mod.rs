@@ -1,6 +1,6 @@
 use core::arch::{ global_asm, asm };
 
-use crate::constants::layout::TRAMPOLINE;
+use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie };
 use riscv::register::scause::{ Trap, Exception};
@@ -9,6 +9,11 @@ mod context;
 pub use context::TrapContext;
 
 global_asm!(include_str!("trap.S"));
+
+/// initialize CSR `stvec` as the entry of `__alltraps`
+pub fn init() {
+    set_kernel_trap_entry();
+}
 
 /// enable timer interrupt in sie CSR
 pub fn enable_timer_interrupt() {
@@ -41,25 +46,24 @@ fn set_user_trap_entry() {
 /// set the new addr of __restore asm function in TRAMPOLINE page,
 /// set the reg a0 = trap_cx_ptr, reg a1 = phy addr of usr page table,
 /// finally, jump to new addr of __restore asm function
-pub fn trap_return() -> ! {
+pub fn switch_guest(guest_hgatp: usize) -> ! {
     set_user_trap_entry();
-    // let user_satp = hypervisor.current_user_token();
-    // extern "C" {
-    //     fn __alltraps();
-    //     fn __restore();
-    // }
-    // let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
-    // unsafe {
-    //     asm!(
-    //         "fence.i",
-    //         "jr {restore_va}",             // jump to new addr of __restore asm function
-    //         restore_va = in(reg) restore_va,
-    //         in("a0") trap_cx_ptr,      // a0 = virt addr of Trap Context
-    //         in("a1") user_satp,        // a1 = phy addr of usr page table
-    //         options(noreturn)
-    //     );
-    // }
-    unreachable!()
+    let trap_cx_ptr = TRAP_CONTEXT;
+    extern "C" {
+        fn __alltraps();
+        fn __restore();
+    }
+    let restore_va = __restore as usize - __alltraps as usize + TRAMPOLINE;
+    unsafe {
+        asm!(
+            "fence.i",
+            "jr {restore_va}",             // jump to new addr of __restore asm function
+            restore_va = in(reg) restore_va,
+            in("a0") trap_cx_ptr,      // a0 = virt addr of Trap Context
+            in("a1") guest_hgatp,        // a1 = phy addr of usr page table
+            options(noreturn)
+        );
+    }
 }
 
 

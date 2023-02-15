@@ -9,7 +9,13 @@
 #![feature(naked_functions)]
 #![feature(asm_const)]
 
+#[macro_use]
+extern crate bitflags;
+
 extern crate alloc;
+
+#[path = "boards/qemu.rs"]
+mod board;
 
 #[macro_use]
 mod console;
@@ -22,13 +28,15 @@ mod hyp_alloc;
 mod sync;
 mod shared;
 mod trap;
+mod mm;
 
 
 use constants::layout::TRAMPOLINE;
+use constants::PAGE_SIZE;
 use riscv::register::{ hedeleg, hideleg, hvip, stvec };
 
 /// hypervisor boot stack size
-const BOOT_STACK_SIZE: usize = 16 * 4096;
+const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
 
 #[link_section = ".bss.stack"]
 /// hypocaust boot stack
@@ -95,6 +103,8 @@ unsafe fn initialize_hypervisor() {
     stvec::write(TRAMPOLINE, stvec::TrapMode::Direct);
     assert_eq!(stvec::read().bits(), TRAMPOLINE);
 
+    hdebug!("Initialize hypervisor environment");
+
 }
 
 
@@ -112,11 +122,12 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
             panic!("no RISC-V hypervisor H extension on current environment")
         }
         hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
+        unsafe{ initialize_hypervisor() };
         // initialize heap
         hyp_alloc::heap_init();
-        hdebug!("Heap initialize finished!");
-        unsafe{ initialize_hypervisor() };
-        hdebug!("Initialize hypervisor environment");
+        mm::enable_paging();
+        trap::init();
+        mm::remap_test();
         unreachable!()
     }else{
         unreachable!()

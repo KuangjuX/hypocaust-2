@@ -4,6 +4,8 @@ pub const USER_STACK_SIZE: usize = 4096 * 2;
 pub const KERNEL_STACK_SIZE: usize = 4096 * 4;
 pub const KERNEL_HEAP_SIZE: usize = 0x30_0000;
 
+pub use crate::board::CLOCK_FREQ;
+
 pub mod layout {
     use super::PAGE_SIZE;
 
@@ -14,4 +16,6 @@ pub mod layout {
     pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
     /// 上下文切换数据存储虚拟地址
     pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
+
+    pub use crate::board::MMIO;
 }
