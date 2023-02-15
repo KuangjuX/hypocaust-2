@@ -9,11 +9,17 @@
 #![feature(naked_functions)]
 #![feature(asm_const)]
 
+extern crate alloc;
+
 #[macro_use]
 mod console;
 mod sbi;
 mod lang_items;
 mod detect;
+mod page_table;
+mod constants;
+mod hyp_alloc;
+mod sync;
 
 
 
@@ -44,12 +50,17 @@ pub unsafe extern "C" fn start() -> ! {
     )
 }
 
+fn detect_h_extension() {
+    
+}
+
 
 #[no_mangle]
 fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
+        // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
             panic!("no HSM extension exist under current SBI environment");
         }else{
@@ -61,6 +72,9 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
             hdebug!("RISC-V hypervisor H extension is available on current environment");
         }
         hdebug!("Hypocaust-2 > running with hardware RISC-V H OSA acceration");
+        let hedeleg = riscv::register::hedeleg::read();
+        hdebug!("hedeleg: {:#x}", hedeleg.bits());
+        
         unreachable!()
     }else{
         unreachable!()

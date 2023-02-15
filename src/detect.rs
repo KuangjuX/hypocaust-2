@@ -1,3 +1,5 @@
+//! ref: https://github.com/luojia65/zihai/blob/main/zihai/src/detect.rs
+
 use core::arch::asm;
 use riscv::register::{
     scause::{Exception, Scause, Trap},

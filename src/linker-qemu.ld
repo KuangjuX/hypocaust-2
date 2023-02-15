@@ -48,6 +48,11 @@ SECTIONS
     ekernel = .;
 
     . = ALIGN(4K);
+    sinitrd = .;
+    .initrd : {
+        *(.initrd)
+    }
+    einitrd = .;
 
     /DISCARD/ : {
         *(.eh_frame)
