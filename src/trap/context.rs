@@ -24,7 +24,7 @@ impl TrapContext {
         self.x[2] = sp;
     }
 
-    /// init app context
+    /// init guest trap context
     pub fn initialize_context(
         entry: usize,
         sp: usize,
@@ -32,7 +32,6 @@ impl TrapContext {
         kernel_sp: usize,
         trap_handler: usize,
     ) -> Self {
-        // let mut sstatus = sstatus::read(); // CSR sstatus
         let mut hstatus = hstatus::read();
         hstatus.set_spv(true);
         let mut cx = Self {

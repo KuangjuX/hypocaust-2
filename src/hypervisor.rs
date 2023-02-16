@@ -1,12 +1,12 @@
 pub mod stack {
     use crate::{constants::{
         PAGE_SIZE, KERNEL_STACK_SIZE,
-        layout::TRAMPOLINE
+        layout::TRAP_CONTEXT
     }, shared::SHARED_DATA, mm::MapPermission};
     pub struct HypervisorStack(pub usize);
 
     pub fn hstack_position(guest_id: usize) -> (usize, usize) {
-        let top = TRAMPOLINE - guest_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+        let top = TRAP_CONTEXT - guest_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
         let bottom = top - KERNEL_STACK_SIZE;
         (bottom, top)
     }

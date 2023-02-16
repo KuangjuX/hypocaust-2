@@ -11,10 +11,11 @@
     .globl __alltraps_k
     .globl __restore_k
     .align 2
+
 __alltraps:
+    # 交换 sp 和 sscratch 寄存器,此时 sp 寄存器是 TrapContext 的地址,
+    # sp 是 guest 地址
     csrrw sp, sscratch, sp
-    # now sp->*TrapContext in user space, sscratch->user stack
-    # save other general purpose registers
     sd x1, 1*8(sp)
     # skip sp(x2), we will save it later
     sd x3, 3*8(sp)
@@ -28,21 +29,20 @@ __alltraps:
     # we can use t0/t1/t2 freely, because they have been saved in TrapContext
     csrr t0, sstatus
     csrr t1, sepc
+    # 将 sstatus 和 sepc 存储在 32*8(trap ctx) 和 33*8(trap ctx) 的位置
     sd t0, 32*8(sp)
     sd t1, 33*8(sp)
-    # read user stack from sscratch and save it in TrapContext
+    # 将 guest stack 寄存器保存  
     csrr t2, sscratch
     sd t2, 2*8(sp)
-    # load kernel_satp into t0
+    # 加载 hypervisor satp 到 t0 寄存器
     ld t0, 34*8(sp)
-    # load trap_handler into t1
+    # 加载 hypervisor trap handler 地址到 t1 寄存器
     ld t1, 36*8(sp)
-    # move to kernel_sp
+    # 切换栈寄存器
     ld sp, 35*8(sp)
-    # switch to kernel space
-    csrw hgatp, t0
-    sfence.vma
-    # jump to trap_handler
+    # 由 VS guest 跳转到 HS hypervisor, 不需要切换页表
+    # 跳转到 trap 处理函数
     jr t1
 
 __restore:

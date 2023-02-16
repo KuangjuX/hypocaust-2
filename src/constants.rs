@@ -25,3 +25,25 @@ pub mod layout {
 
     pub use crate::board::MMIO;
 }
+
+pub mod csr {
+    pub enum VirtualzationMode {
+        Host = 0,
+        Guest = 1,
+    }
+
+    #[derive(PartialEq)]
+    pub enum CpuMode {
+        M = 0b11,
+        S = 0b01,
+        U = 0b00
+    }
+
+    pub enum PrevisorMode {
+        U,
+        HS,
+        M,
+        VU,
+        VS
+    }
+}
