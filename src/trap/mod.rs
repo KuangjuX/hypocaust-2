@@ -1,6 +1,7 @@
 use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
+use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar};
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie };
 use riscv::register::scause::{ Trap, Exception };
@@ -134,7 +135,17 @@ fn set_user_trap_entry() {
 pub fn trap_handler() -> ! {
     let trap_ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
     let scause = scause::read();
-    panic!("trap handler sepc: {:#x}, stval: {:#x}, scause: {:?}", trap_ctx.sepc, stval::read(), scause.cause());
+    match scause.cause() {
+        scause::Trap::Exception(scause::Exception::UserEnvCall) => {
+            match trap_ctx.x[17] {
+                SBI_CONSOLE_PUTCHAR => console_putchar(trap_ctx.x[10]),
+                _ => unimplemented!()
+            }
+            trap_ctx.sepc += 4;
+        },
+        _ => unimplemented!()
+    }
+    unsafe{ switch_to_guest() }
 }
 
 #[no_mangle]

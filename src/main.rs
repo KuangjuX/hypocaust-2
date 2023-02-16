@@ -97,7 +97,7 @@ unsafe fn initialize_hypervisor() {
     hedeleg::write(
         hedeleg::INST_ADDR_MISALIGN |
         hedeleg::BREAKPOINT | 
-        hedeleg::ENV_CALL_FROM_U_OR_VU | 
+        // hedeleg::ENV_CALL_FROM_U_OR_VU | 
         hedeleg::INST_PAGE_FAULT |
         hedeleg::LOAD_PAGE_FAULT |
         hedeleg::STORE_PAGE_FAULT
