@@ -1,5 +1,17 @@
 # hypocaust-2
-Hypocaust-2 is a  type-1 hypervisor with H extension run on RISC-V machine
+Hypocaust-2 is a type-1 hypervisor with H extension run on RISC-V machine. It depends on the RISC -V H extension, which currently runs on QEMU 7.0 or above.
+
+## Environment
+QEMU 7.0.0
+RustSBI-QEMU version 0.2.0-alpha.2
+Rust 1.66.0 
+
+## Build
+```
+git clone https://github.com/KuangjuX/hypocaust-2.git
+cd hypocaust-2
+make qemu
+```
 
 ## RoadMap
 - [x] Load guest elf image.
