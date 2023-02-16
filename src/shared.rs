@@ -1,3 +1,4 @@
+use crate::guest::page_table::GuestPageTable;
 use crate::mm::MemorySet;
 use crate::page_table::{PageTable, PageTableSv39};
 use crate::guest::Guest;
@@ -15,7 +16,7 @@ lazy_static! {
 }
 
 /// 多核间共享数据
-pub struct SharedData<P: PageTable> {
+pub struct SharedData<P: PageTable + GuestPageTable> {
     /// hypervisor memory
     pub hpm: MemorySet<P>,
     /// all guest structs

@@ -1,5 +1,6 @@
 //! Implementation of [`MapArea`] and [`MemorySet`].
 
+use crate::guest::page_table::GuestPageTable;
 use crate::hyp_alloc::{ FrameTracker, frame_alloc };
 use crate::page_table::{PTEFlags, PageTable, PageTableEntry};
 use crate::page_table::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
@@ -31,18 +32,26 @@ extern "C" {
 
 
 /// memory set structure, controls virtual-memory space
-pub struct MemorySet<P: PageTable> {
+pub struct MemorySet<P: PageTable + GuestPageTable> {
     page_table: P,
     areas: Vec<MapArea<P>>,
 }
 
-impl<P> MemorySet<P> where P: PageTable {
+impl<P: PageTable + GuestPageTable> MemorySet<P> {
     pub fn new_bare() -> Self {
         Self {
             page_table: PageTable::new(),
             areas: Vec::new(),
         }
     }
+
+    pub fn new_guest_bare() -> Self {
+        Self {
+            page_table: GuestPageTable::new_guest(),
+            areas: Vec::new()
+        }
+    }
+
     pub fn token(&self) -> usize {
         self.page_table.token()
     }
@@ -181,7 +190,7 @@ impl<P> MemorySet<P> where P: PageTable {
     }
 
     pub fn new_guest(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
-        let mut memory_set = Self::new_bare();
+        let mut memory_set = Self::new_guest_bare();
         let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
@@ -229,9 +238,9 @@ impl<P> MemorySet<P> where P: PageTable {
             
         }
         let offset = paddr as usize - GUEST_START_PA;
+        hdebug!("offset: {:#x}", offset);
         let guest_end_pa = GUEST_START_PA + gpm_size;
         let guest_end_va = GUEST_START_VA + gpm_size; 
-        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
         // 映射其他物理内存
         memory_set.push(MapArea::new(
                 VirtAddr(offset + GUEST_START_VA), 
@@ -243,7 +252,7 @@ impl<P> MemorySet<P> where P: PageTable {
             ),
             None
         );
-
+        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
         memory_set
     }
 

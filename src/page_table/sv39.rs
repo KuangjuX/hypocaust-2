@@ -1,3 +1,4 @@
+use crate::guest::page_table::GuestPageTable;
 use crate::hyp_alloc::{ FrameTracker, frame_alloc };
 
 use super::{ PhysPageNum, VirtPageNum, PageTable, PageTableLevel, PTEFlags, PageTableEntry, PteWrapper, PageWalk };
@@ -52,6 +53,28 @@ impl PageTableSv39 {
 }
 
 
+
+impl GuestPageTable for PageTableSv39 {
+    /// 新建 guest 根目录页表,需要分配 16 KiB 的内存
+    /// 并且 16 KiB 内存对齐
+    fn new_guest() -> Self {
+        let mut frames = vec![];
+        let mut root_frame = frame_alloc().unwrap();
+        while root_frame.ppn.0 & 0x3 != 0 {
+            hdebug!("page {:#x} was allocated, but is does not follow 16KiB buundary.", root_frame.ppn.0);
+            frames.push(root_frame);
+            root_frame = frame_alloc().unwrap();
+        }
+        for _ in 0..3 {
+            frames.push(frame_alloc().unwrap());
+        }
+        Self {
+            root_ppn: root_frame.ppn,
+            frames
+        }
+    }
+}
+
 impl PageTable for PageTableSv39 {
     fn new() -> Self {
         let frame = frame_alloc().unwrap();
@@ -78,6 +101,7 @@ impl PageTable for PageTableSv39 {
         assert!(!pte.is_valid(), "vpn {:?} is mapped before mapping", vpn);
         *pte = PageTableEntry::new(ppn, flags | PTEFlags::V);
     }
+    
     #[allow(unused)]
     fn unmap(&mut self, vpn: VirtPageNum) {
         let pte = self.find_pte(vpn).unwrap();

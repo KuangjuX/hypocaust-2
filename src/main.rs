@@ -152,12 +152,11 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         mm::enable_paging(&gpm);
         // trap init
         trap::init();
-
+        // memory translation test
         mm::remap_test();
-
+        // initialize guest memory
         gpm.initialize_gpm();
         hdebug!("{:#x} -> {:#x}", TRAMPOLINE >> 12, gpm.translate(VirtPageNum::from(TRAMPOLINE >> 12)).unwrap().ppn().0);
-
         // 创建 guest
         let guest = Guest::new(0, gpm);
         add_guest(guest);

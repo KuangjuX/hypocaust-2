@@ -1,4 +1,4 @@
-# Trap 的设计
+# Trap Design
 
 ## 由 hypervisor 切换到 guest
 - 切换 `hgatp` 寄存器并且 `hfence.gvma` 用来开启两阶段页表翻译
