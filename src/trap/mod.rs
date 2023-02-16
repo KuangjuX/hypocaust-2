@@ -158,7 +158,6 @@ pub unsafe fn switch_to_guest() -> ! {
 
     // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret
     riscv::register::sstatus::set_spp(riscv::register::sstatus::SPP::Supervisor);
-    let trap_cx_ptr = TRAP_CONTEXT;
     extern "C" {
         fn __alltraps();
         fn __restore();
@@ -169,7 +168,7 @@ pub unsafe fn switch_to_guest() -> ! {
             "fence.i",
             "jr {restore_va}",             // jump to new addr of __restore asm function
             restore_va = in(reg) restore_va,
-            in("a0") trap_cx_ptr,           // a0 = virt addr of Trap Context
+            in("a0") TRAP_CONTEXT,           // a0 = virt addr of Trap Context
             in("a1") trap_ctx.hgatp,        // a1 = phy addr of usr page table
             options(noreturn)
         );

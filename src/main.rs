@@ -34,13 +34,12 @@ mod guest;
 mod hypervisor;
 
 
-use constants::layout::TRAMPOLINE;
 use constants::PAGE_SIZE;
-use riscv::register::{ hedeleg, hideleg, hvip, stvec };
+use riscv::register::{ hedeleg, hideleg, hvip };
 
 use crate::mm::MemorySet;
 use crate::constants::layout::GUEST_DEFAULT_SIZE;
-use crate::page_table::{PageTableSv39, VirtPageNum};
+use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
 use crate::shared::add_guest;
 use crate::trap::switch_to_guest;
@@ -117,10 +116,6 @@ unsafe fn initialize_hypervisor() {
     hvip::clear_vssip();
     hvip::clear_vstip();
 
-    // stvec: set handler
-    stvec::write(TRAMPOLINE, stvec::TrapMode::Direct);
-    assert_eq!(stvec::read().bits(), TRAMPOLINE);
-
     hdebug!("Initialize hypervisor environment");
 
 }
@@ -156,7 +151,7 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         mm::remap_test();
         // initialize guest memory
         gpm.initialize_gpm();
-        hdebug!("{:#x} -> {:#x}", TRAMPOLINE >> 12, gpm.translate(VirtPageNum::from(TRAMPOLINE >> 12)).unwrap().ppn().0);
+        // hdebug!("{:#x} -> {:#x}", (0x8000_0000 as usize) >> 12, gpm.translate(VirtPageNum::from(0x8000_0000 >> 12)).unwrap().ppn().0);
         // 创建 guest
         let guest = Guest::new(0, gpm);
         add_guest(guest);

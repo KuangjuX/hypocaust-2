@@ -44,7 +44,8 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             areas: Vec::new(),
         }
     }
-
+    /// 为 guest page table 新建根页表
+    /// 需要分配 16 KiB 对齐的页表
     pub fn new_guest_bare() -> Self {
         Self {
             page_table: GuestPageTable::new_guest(),
@@ -191,6 +192,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
 
     pub fn new_guest(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
         let mut memory_set = Self::new_guest_bare();
+        // let mut memory_set = Self::new_bare();
         let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
@@ -238,7 +240,6 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             
         }
         let offset = paddr as usize - GUEST_START_PA;
-        hdebug!("offset: {:#x}", offset);
         let guest_end_pa = GUEST_START_PA + gpm_size;
         let guest_end_va = GUEST_START_VA + gpm_size; 
         // 映射其他物理内存

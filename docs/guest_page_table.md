@@ -7,4 +7,10 @@ Guest 物理地址翻译和 supervisor 物理地址翻译有所不同, Guest 物
   
 ![](image/G-state-Sv39.jpg)
 
-上图是 Sv39 的物理地址结构,除了根页表是 16KiB 之外,其他都相同,并且 Address[63: 41] 必须是 0,否则将会发生 guest page fault.
+上图是 Sv39 的物理地址结构,除了根页表是 16KiB 之外,其他都相同,并且 Address[63: 41] 必须是 0,否则将会发生 guest page fault.  
+  
+Sv32x4，Sv39x4，Sv48x4，Sv57x4 的 guest 物理地址转换与 supervisor 的物理地址转换相同，除了：
+- `hgatp` 替代通常的 `satp`
+- 启用翻译的特权及模式必须是 VS-mode 或者 VU-mode
+- 检查 U 位，始终取当前特权模式为 U mode
+- 使用 **Guest Page Fault** 代替常规的 **Page Fault**

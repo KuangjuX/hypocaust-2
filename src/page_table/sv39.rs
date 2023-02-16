@@ -65,11 +65,14 @@ impl GuestPageTable for PageTableSv39 {
             frames.push(root_frame);
             root_frame = frame_alloc().unwrap();
         }
+        hdebug!("Guest root page table: {:#x}", root_frame.ppn.0);
+        let root_ppn = root_frame.ppn;
+        frames.push(root_frame);
         for _ in 0..3 {
             frames.push(frame_alloc().unwrap());
         }
         Self {
-            root_ppn: root_frame.ppn,
+            root_ppn: root_ppn,
             frames
         }
     }
