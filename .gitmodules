@@ -1,0 +1,3 @@
+[submodule "minikernel"]
+	path = minikernel
+	url = git@github.com:KuangjuX/minikernel.git

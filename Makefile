@@ -28,13 +28,13 @@ QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 
 
+# $(GUEST):
+# 	cd guest && cargo build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
+
+
 $(GUEST):
-	cd guest && cargo build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
-
-
-$(GUEST_KERNEL_ELF):
 	cd minikernel/user && cargo build --release
-	cd minikernel && cargo build && cp target/$(TARGET)/$(MODE)/minikernel ../guest_kernel
+	cd minikernel && cargo build && cp target/$(TARGET)/$(MODE)/minikernel ../guest.bin
 
 
 build: $(GUEST)

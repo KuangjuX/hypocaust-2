@@ -69,7 +69,7 @@ pub fn trap_handler() -> ! {
             // 无效指令，读/写 csr
             panic!("read/write CSR");
         }
-        _ => unimplemented!()
+        _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
     unsafe{ switch_to_guest() }
 }
