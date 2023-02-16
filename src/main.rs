@@ -147,7 +147,7 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         hyp_alloc::heap_init();
 
         // create guest memory set
-        let mut gpm = MemorySet::<PageTableSv39>::new_guest_kernel(&GUEST, GUEST_DEFAULT_SIZE);
+        let mut gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
         // hypervisor enable paging
         mm::enable_paging(&gpm);
         // trap init

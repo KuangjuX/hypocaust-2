@@ -5,6 +5,9 @@
 - 设置 `hsatus` 寄存器的 `SPV` 位为 1 表明返回 VS mode
 - 设置 `sstatus` 寄存器的 `SPP` 位为 1 表明返回 S mode
 - 设置 `sepc` 用来标志返回入口
+- 切换 `sp` 和 `sscratch`,使其全部指向 Trap Context 
+- 恢复上下文
+- sret 返回 guest 执行
 
 ## 由 guest 切换到 hypervisor
 - 首先交换 `sscratch` 和 `sp` 寄存器的值,此时 `sscratch` 存储的是 guest 栈指针地址,`sp` 存储的是 trap context 地址

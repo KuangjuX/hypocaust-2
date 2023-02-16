@@ -3,7 +3,7 @@ use core::arch::{ global_asm, asm };
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie };
-use riscv::register::scause::{ Trap, Exception};
+use riscv::register::scause::{ Trap, Exception };
 
 mod context;
 pub use context::TrapContext;

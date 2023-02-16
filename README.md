@@ -2,8 +2,12 @@
 Hypocaust-2 is a  type-1 hypervisor with H extension run on RISC-V machine
 
 ## RoadMap
-- [x] load guest os elf image
-- [ ] run guest os loaded to a VM while enabling guest physical address translation by hgatp
-- [ ] handle privileged instructions and SBI call
-- [ ] Timer
-- [ ] Virtio device virtualization
+- [x] Load guest elf image.
+- [ ] Run guest loaded to a VM while enabling guest physical address translation by `hgatp`.
+- [ ] Handle privileged instructions and SBI call.
+- [ ] Guest enable paging & setup two-stage page table translation.
+- [ ] Timers
+- [ ] Passthrough virtio block and networkd devices
+- [ ] Expose and/or emulate peripherals
+- [ ] multicore supported
+- [ ] multiguest supported

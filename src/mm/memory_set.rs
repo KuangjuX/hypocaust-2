@@ -180,7 +180,7 @@ impl<P> MemorySet<P> where P: PageTable {
         hpm
     }
 
-    pub fn new_guest_kernel(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
+    pub fn new_guest(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
         let mut memory_set = Self::new_bare();
         let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
         let elf_header = elf.header;
@@ -196,6 +196,7 @@ impl<P> MemorySet<P> where P: PageTable {
             if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
                 let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
                 let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
+                hdebug!("va: [{:#x}: {:#x})", start_va.0, end_va.0);
                 let mut map_perm = MapPermission { bits: 0 };
                 let ph_flags = ph.flags();
                 if ph_flags.is_read() {
