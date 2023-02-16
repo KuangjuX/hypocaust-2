@@ -1,4 +1,4 @@
-use riscv::register::hstatus::{self, Hstatus};
+use riscv::register::sstatus::{self, SPP, Sstatus};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -7,11 +7,11 @@ pub struct TrapContext {
     /// general regs[0..31]
     pub x: [usize; 32],
     /// CSR hstatus      
-    pub hstatus: Hstatus,
+    pub sstatus: Sstatus,
     /// CSR sepc
     pub sepc: usize,
     /// Addr of Page Table
-    pub kernel_satp: usize,
+    pub hgatp: usize,
     /// kernel stack
     pub kernel_sp: usize,
     /// Addr of trap_handler function
@@ -28,17 +28,17 @@ impl TrapContext {
     pub fn initialize_context(
         entry: usize,
         sp: usize,
-        kernel_satp: usize,
+        hgatp: usize,
         kernel_sp: usize,
         trap_handler: usize,
     ) -> Self {
-        let mut hstatus = hstatus::read();
-        hstatus.set_spv(true);
+        let mut sstatus = sstatus::read(); // CSR sstatus
+        sstatus.set_spp(SPP::User); //previous privilege mode: user mode
         let mut cx = Self {
             x: [0; 32],
-            hstatus,
+            sstatus,
             sepc: entry,  // entry point of app
-            kernel_satp,  // addr of page table
+            hgatp,  // addr of page table
             kernel_sp,    // kernel stack
             trap_handler, // addr of trap_handler function
         };

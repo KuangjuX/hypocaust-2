@@ -13,6 +13,7 @@ pub mod stack {
 
     pub fn hstack_alloc(guest_id: usize) -> HypervisorStack {
         let (hstack_bottom, hstack_top) = hstack_position(guest_id);
+        hdebug!("allocated hstack: [{:#x}: {:#x})",hstack_bottom, hstack_top);
         let mut sharded_data = SHARED_DATA.lock();
         sharded_data.hpm.insert_framed_area(
             hstack_bottom.into(),

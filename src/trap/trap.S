@@ -35,7 +35,7 @@ __alltraps:
     # 将 guest stack 寄存器保存  
     csrr t2, sscratch
     sd t2, 2*8(sp)
-    # 加载 hypervisor satp 到 t0 寄存器
+    # 加载 hgatp 到 t0 寄存器
     ld t0, 34*8(sp)
     # 加载 hypervisor trap handler 地址到 t1 寄存器
     ld t1, 36*8(sp)
@@ -45,11 +45,10 @@ __alltraps:
     # 跳转到 trap 处理函数
     jr t1
 
+# a0: trap context addr; a1: hgatp
 __restore:
-    # a0: *TrapContext in user space(Constant); a1: user space token
-    # switch to user space
-    csrw hgatp, a1
-    sfence.vma
+    # 注意,此时不需要进行页表切换,此时仍在 HS 态,使用 satp 进行 MMU 地址翻译
+    # 将 sscratch 和 sp 全部写入 a0(Trap Context)
     csrw sscratch, a0
     mv sp, a0
     # now sp points to TrapContext in user space, start restoring based on it

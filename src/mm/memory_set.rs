@@ -84,11 +84,26 @@ impl<P> MemorySet<P> where P: PageTable {
     /// 内核虚拟地址映射
     /// 映射了内核代码段和数据段以及跳板页，没有映射内核栈
     pub fn new_kernel() -> Self {
-        let mut memory_set = Self::new_bare();
+        let mut hpm = Self::new_bare();
         // map trampoline
-        memory_set.map_trampoline();
+        hpm.map_trampoline();
+
+        // 这里注意了,需要单独映射 Trap Context,因为在上下文切换时
+        // 我们是不切换页表的
+        hpm.push(
+            MapArea::new(
+                TRAP_CONTEXT.into(),
+                TRAMPOLINE.into(),
+                None,
+                None,
+                MapType::Framed,
+                MapPermission::R | MapPermission::W
+            ),
+            None,
+        );
+
         // map kernel sections
-        memory_set.push(
+        hpm.push(
             MapArea::new(
                 (stext as usize).into(),
                 (etext as usize).into(),
@@ -99,7 +114,8 @@ impl<P> MemorySet<P> where P: PageTable {
             ),
             None,
         );
-        memory_set.push(
+
+        hpm.push(
             MapArea::new(
                 (srodata as usize).into(),
                 (erodata as usize).into(),
@@ -110,7 +126,8 @@ impl<P> MemorySet<P> where P: PageTable {
             ),
             None,
         );
-        memory_set.push(
+
+        hpm.push(
             MapArea::new(
                 (sdata as usize).into(),
                 (edata as usize).into(),
@@ -121,7 +138,8 @@ impl<P> MemorySet<P> where P: PageTable {
             ),
             None,
         );
-        memory_set.push(
+
+        hpm.push(
             MapArea::new(
                 (sbss_with_stack as usize).into(),
                 (ebss as usize).into(),
@@ -132,7 +150,8 @@ impl<P> MemorySet<P> where P: PageTable {
             ),
             None,
         );
-        memory_set.push(
+
+        hpm.push(
             MapArea::new(
                 (ekernel as usize).into(),
                 MEMORY_END.into(),
@@ -145,7 +164,7 @@ impl<P> MemorySet<P> where P: PageTable {
         );
 
         for pair in MMIO {
-            memory_set.push(
+            hpm.push(
                 MapArea::new(
                     (*pair).0.into(),
                     ((*pair).0 + (*pair).1).into(),
@@ -158,50 +177,7 @@ impl<P> MemorySet<P> where P: PageTable {
             );
         }
 
-        memory_set
-    }
-
-    /// 创建用户态的 Guest Kernel 内存空间
-    pub fn create_user_guest_kernel(guest_kernel_memory: &Self) -> Self {
-        let mut memory_set = Self::new_bare();
-        // 代码段：可读可执行
-        // 数据段：可读
-        // 所有段映射用户空间
-        for area in guest_kernel_memory.areas.iter() {
-            let mut user_area = area.clone();
-            // 添加用户标志
-            user_area.map_perm |= MapPermission::U;
-            memory_set.push(user_area.clone(), None);
-        }
-        // 创建跳板页映射
-        memory_set.map_trampoline();
-        // 映射 Trap Context
-        memory_set.push(
-            MapArea::new(
-                TRAP_CONTEXT.into(),
-                TRAMPOLINE.into(),
-                None,
-                None,
-                MapType::Framed,
-                MapPermission::R | MapPermission::W
-            ),
-            None,
-        );
-        
-        for pair in MMIO {
-            memory_set.push(
-                MapArea::new(
-                    (*pair).0.into(),
-                    ((*pair).0 + (*pair).1).into(),
-                    Some((*pair).0.into()),
-                    Some(((*pair).0 + (*pair).1).into()),
-                    MapType::Linear,
-                    MapPermission::R | MapPermission::W | MapPermission::U,
-                ),
-                None,
-            );
-        }
-        memory_set
+        hpm
     }
 
     pub fn new_guest_kernel(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
@@ -271,19 +247,8 @@ impl<P> MemorySet<P> where P: PageTable {
     }
 
     pub fn initialize_gpm(&mut self) {
+        // 映射跳板页与 MMIO
         self.map_trampoline();
-        self.push(
-            MapArea::new(
-                TRAP_CONTEXT.into(),
-                TRAMPOLINE.into(),
-                None,
-                None,
-                MapType::Framed,
-                MapPermission::R | MapPermission::W
-            ),
-            None,
-        );
-
         for pair in MMIO {
             self.push(
                 MapArea::new(

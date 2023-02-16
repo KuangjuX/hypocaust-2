@@ -43,6 +43,7 @@ use crate::constants::layout::GUEST_DEFAULT_SIZE;
 use crate::page_table::{PageTableSv39, VirtPageNum};
 use crate::guest::Guest;
 use crate::shared::add_guest;
+use crate::trap::switch_to_guest;
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
@@ -124,20 +125,7 @@ unsafe fn initialize_hypervisor() {
 
 }
 
-unsafe fn switch_to_guest(hgatp: usize) -> ! {
-    // hgatp: set page table for guest physical address translation
-    let hgatp = riscv::register::hgatp::Hgatp::from_bits(hgatp);
-    hgatp.write(); 
-    core::arch::riscv64::hfence_gvma_all();
-    assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
 
-    // hstatus: handle SPV change the virtualization mode to 0 after sret
-    riscv::register::hstatus::set_spv();
-
-    // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret
-    riscv::register::sstatus::set_spp(riscv::register::sstatus::SPP::Supervisor);
-    unreachable!()
-}
 
 
 #[no_mangle]
@@ -174,7 +162,8 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         let guest = Guest::new(0, gpm);
         add_guest(guest);
 
-        unreachable!()
+        // 切换上下文并跳转到 guest 执行
+        unsafe{ switch_to_guest() }
     }else{
         unreachable!()
     }
