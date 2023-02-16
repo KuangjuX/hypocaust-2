@@ -20,7 +20,7 @@ make qemu
 - [x] Run a tiny kernel that does not require any external hardware like disk devices.
 - [x] Handle read/write requests for CSRs from a guest
 - [ ] Handle SBI calls
-- [ ] Guest enable paging & setup two-stage page table translation.
+- [x] Guest enable paging & setup two-stage page table translation.
 - [ ] Timers
 - [ ] Passthrough virtio block and networkd devices
 - [ ] Expose and/or emulate peripherals
