@@ -132,14 +132,14 @@ fn set_user_trap_entry() {
 
 #[no_mangle]
 pub fn trap_handler() -> ! {
-    unreachable!()
+    panic!("trap handler");
 }
 
 #[no_mangle]
 /// set the new addr of __restore asm function in TRAMPOLINE page,
 /// set the reg a0 = trap_cx_ptr, reg a1 = phy addr of usr page table,
 /// finally, jump to new addr of __restore asm function
-pub fn switch_guest(guest_hgatp: usize) -> ! {
+pub fn switch_to_guest(guest_hgatp: usize) -> ! {
     set_user_trap_entry();
     let trap_cx_ptr = TRAP_CONTEXT;
     extern "C" {
