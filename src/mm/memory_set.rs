@@ -249,7 +249,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                 Some(PhysAddr(paddr as usize)), 
                 Some(PhysAddr(guest_end_pa)), 
                 MapType::Linear, 
-                MapPermission::R | MapPermission::W
+                MapPermission::R | MapPermission::W | MapPermission::U
             ),
             None
         );
