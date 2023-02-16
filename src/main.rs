@@ -97,7 +97,7 @@ unsafe fn initialize_hypervisor() {
     hedeleg::write(
         hedeleg::INST_ADDR_MISALIGN |
         hedeleg::BREAKPOINT | 
-        // hedeleg::ENV_CALL_FROM_U_OR_VU | 
+        hedeleg::ENV_CALL_FROM_U_OR_VU | 
         hedeleg::INST_PAGE_FAULT |
         hedeleg::LOAD_PAGE_FAULT |
         hedeleg::STORE_PAGE_FAULT
@@ -139,7 +139,6 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         unsafe{ initialize_hypervisor() };
         // initialize heap
         hyp_alloc::heap_init();
-
         // create guest memory set
         let mut gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
         // hypervisor enable paging

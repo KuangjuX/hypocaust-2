@@ -32,8 +32,9 @@ impl TrapContext {
         kernel_sp: usize,
         trap_handler: usize,
     ) -> Self {
-        let mut sstatus = sstatus::read(); // CSR sstatus
-        sstatus.set_spp(SPP::User); //previous privilege mode: user mode
+        let mut sstatus = sstatus::read();
+        // 这里需要注意，进入 VS 态的时候需要将 sstatus 的 SPP 设置为 Supervisor
+        sstatus.set_spp(SPP::Supervisor); 
         let mut cx = Self {
             x: [0; 32],
             sstatus,

@@ -137,12 +137,20 @@ pub fn trap_handler() -> ! {
     let scause = scause::read();
     match scause.cause() {
         scause::Trap::Exception(scause::Exception::UserEnvCall) => {
+            // match trap_ctx.x[17] {
+            //     SBI_CONSOLE_PUTCHAR => console_putchar(trap_ctx.x[10]),
+            //     _ => unimplemented!()
+            // }
+            // trap_ctx.sepc += 4;
+            panic!("U-mode/VU-mode env call from VS-mode?");
+        },
+        scause::Trap::Exception(scause::Exception::VirtualSupervisorEnvCall) => {
             match trap_ctx.x[17] {
                 SBI_CONSOLE_PUTCHAR => console_putchar(trap_ctx.x[10]),
                 _ => unimplemented!()
             }
             trap_ctx.sepc += 4;
-        },
+        }
         _ => unimplemented!()
     }
     unsafe{ switch_to_guest() }
