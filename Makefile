@@ -66,8 +66,8 @@ debug: $(KERNEL_BIN)
 		tmux -2 attach-session -d
 
 asm:
-	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust > hyper.S 
-	riscv64-unknown-elf-objdump -d guest_kernel > guest.S 
+	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust-2 > hyper.S 
+	riscv64-unknown-elf-objdump -d guest.bin > guest.S 
 
 
 $(FS_IMG):

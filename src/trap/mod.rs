@@ -134,7 +134,7 @@ fn set_user_trap_entry() {
 pub fn trap_handler() -> ! {
     let trap_ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
     let scause = scause::read();
-    panic!("trap handler sepc: {:#x}, scause: {:?}", trap_ctx.sepc, scause.cause());
+    panic!("trap handler sepc: {:#x}, stval: {:#x}, scause: {:?}", trap_ctx.sepc, stval::read(), scause.cause());
 }
 
 #[no_mangle]

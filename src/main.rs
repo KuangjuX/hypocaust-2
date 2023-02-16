@@ -35,10 +35,11 @@ mod hypervisor;
 
 
 use constants::PAGE_SIZE;
-use riscv::register::{ hedeleg, hideleg, hvip };
+use riscv::register::hvip;
 
 use crate::mm::MemorySet;
 use crate::constants::layout::GUEST_DEFAULT_SIZE;
+use crate::constants::csr::{ hedeleg, hideleg };
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
 use crate::shared::add_guest;
@@ -93,23 +94,21 @@ fn clear_bss() {
 
 unsafe fn initialize_hypervisor() {
     // hedeleg: delegate some synchronous exceptions
-    // Instruction address misaligned
-    hedeleg::set_ex0();
-    // breakpoint
-    hedeleg::set_ex3();
-    // Environment call from U-mode or VU-mode 
-    hedeleg::set_ex8();
-    // Instruction page fault 
-    hedeleg::set_ex12();
-    // Load page fault 
-    hedeleg::set_ex13();
-    // Store/AMO page fault 
-    hedeleg::set_ex15();
+    hedeleg::write(
+        hedeleg::INST_ADDR_MISALIGN |
+        hedeleg::BREAKPOINT | 
+        hedeleg::ENV_CALL_FROM_U_OR_VU | 
+        hedeleg::INST_PAGE_FAULT |
+        hedeleg::LOAD_PAGE_FAULT |
+        hedeleg::STORE_PAGE_FAULT
+    );
 
     // hideleg: delegate all interrupts
-    hideleg::set_eip();
-    hideleg::set_sip();
-    hideleg::clear_tip();
+    hideleg::write(
+        hideleg::VSEIP |
+        hideleg::VSSIP | 
+        hideleg::VSTIP
+    );
 
     // hvip: clear all interrupts
     hvip::clear_vseip();
@@ -144,7 +143,7 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         // create guest memory set
         let mut gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
         // hypervisor enable paging
-        mm::enable_paging(&gpm);
+        mm::enable_paging();
         // trap init
         trap::init();
         // memory translation test

@@ -190,10 +190,9 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
         hpm
     }
 
-    pub fn new_guest(guest_kernel_data: &[u8], gpm_size: usize) -> Self {
+    pub fn new_guest(guest_data: &[u8], gpm_size: usize) -> Self {
         let mut memory_set = Self::new_guest_bare();
-        // let mut memory_set = Self::new_bare();
-        let elf = xmas_elf::ElfFile::new(guest_kernel_data).unwrap();
+        let elf = xmas_elf::ElfFile::new(guest_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
@@ -208,7 +207,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                 let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
                 let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
                 hdebug!("va: [{:#x}: {:#x})", start_va.0, end_va.0);
-                let mut map_perm = MapPermission { bits: 0 };
+                let mut map_perm = MapPermission::U;
                 let ph_flags = ph.flags();
                 if ph_flags.is_read() {
                     map_perm |= MapPermission::R;
@@ -221,7 +220,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                 }
                 // 将内存拷贝到对应的物理内存上
                 unsafe{
-                    core::ptr::copy(guest_kernel_data.as_ptr().add(ph.offset() as usize), paddr, ph.file_size() as usize);
+                    core::ptr::copy(guest_data.as_ptr().add(ph.offset() as usize), paddr, ph.file_size() as usize);
                     let page_align_size = ((ph.mem_size() as usize + PAGE_SIZE - 1) >> 12) << 12;
                     paddr = paddr.add(page_align_size);
                 }
@@ -240,6 +239,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             
         }
         let offset = paddr as usize - GUEST_START_PA;
+
         let guest_end_pa = GUEST_START_PA + gpm_size;
         let guest_end_va = GUEST_START_VA + gpm_size; 
         // 映射其他物理内存

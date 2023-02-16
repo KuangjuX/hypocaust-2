@@ -1,2 +1,5 @@
 /target
 *.bin
+.gdb_history
+guest.S
+hyper.S
