@@ -149,7 +149,6 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         mm::remap_test();
         // initialize guest memory
         gpm.initialize_gpm();
-        // hdebug!("{:#x} -> {:#x}", (0x8000_0000 as usize) >> 12, gpm.translate(VirtPageNum::from(0x8000_0000 >> 12)).unwrap().ppn().0);
         // 创建 guest
         let guest = Guest::new(0, gpm);
         add_guest(guest);

@@ -31,8 +31,13 @@ pub fn rust_main() -> ! {
     clear_bss();
     println!("[kernel] Hello, Guest Kernel!");
     unsafe{ 
+        let mut x = 0;
         csrw_test();
         csrr_test(); 
+        core::arch::asm!(
+            "csrr {}, misa",
+            out(reg) x
+        );
     }
     panic!("panic in rust_main.")
 }

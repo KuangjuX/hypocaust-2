@@ -15,8 +15,10 @@ make qemu
 
 ## RoadMap
 - [x] Load guest elf image.
-- [x] Run guest loaded to a VM while enabling guest physical address translation by `hgatp`.
-- [ ] Handle privileged instructions and SBI call.
+- [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
+- [ ] Run a tiny kernel that does not require any external hardware like disk devices.
+- [ ] Handle read/write requests for CSRs from a guest
+- [ ] Handle SBI calls
 - [ ] Guest enable paging & setup two-stage page table translation.
 - [ ] Timers
 - [ ] Passthrough virtio block and networkd devices

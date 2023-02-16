@@ -64,6 +64,10 @@ pub fn trap_handler() -> ! {
         scause::Trap::Exception(scause::Exception::VirtualSupervisorEnvCall) => {
             sbi_handler(ctx);
             ctx.sepc += 4;
+        },
+        scause::Trap::Exception(scause::Exception::IllegalInstruction) => {
+            // 无效指令，读/写 csr
+            panic!("read/write CSR");
         }
         _ => unimplemented!()
     }
@@ -83,7 +87,7 @@ pub unsafe fn switch_to_guest() -> ! {
     if riscv::register::hgatp::read().bits() != trap_ctx.hgatp {
         let hgatp = riscv::register::hgatp::Hgatp::from_bits(trap_ctx.hgatp);
         hgatp.write(); 
-        core::arch::riscv64::hfence_gvma_all();
+        core::arch::riscv64::hfence_gvma(0, 0);
         assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
     }
     // hstatus: handle SPV change the virtualization mode to 0 after sret
