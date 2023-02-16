@@ -1,7 +1,7 @@
 use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
-use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar};
+use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie };
 use riscv::register::scause::{ Trap, Exception };
@@ -43,113 +43,27 @@ fn set_user_trap_entry() {
     }
 }
 
-// #[link_section = ".text.trampoline"]
-// #[export_name = "vstrap_entry"]
-// #[naked]
-// pub unsafe extern "C" fn vstrap_entry() -> ! {
-//     asm!(
-//         ".align 4",
-//         // 保存栈指针到 `sscratch` 寄存器
-//         "csrw sscratch, sp",
-//         // 设置栈指针
-//         "li sp, {trap_context}",
-//         // 由 guest 切换到 hypervisor, 存储上下文
-//         "sd ra, 1*8(sp)",
-//         "sd gp, 3*8(sp)",
-//         "sd tp, 4*8(sp)",
-//         "sd t0, 5*8(sp)",
-//         "sd t1, 6*8(sp)",
-//         "sd t2, 7*8(sp)",
-//         "sd s0, 8*8(sp)",
-//         "sd s1, 9*8(sp)",
-//         "sd a0, 10*8(sp)",
-//         "sd a1, 11*8(sp)",
-//         "sd a2, 12*8(sp)",
-//         "sd a3, 13*8(sp)",
-//         "sd a4, 14*8(sp)",
-//         "sd a5, 15*8(sp)",
-//         "sd a6, 16*8(sp)",
-//         "sd a7, 17*8(sp)",
-//         "sd s2, 18*8(sp)",
-//         "sd s3, 19*8(sp)",
-//         "sd s4, 20*8(sp)",
-//         "sd s5, 21*8(sp)",
-//         "sd s6, 22*8(sp)",
-//         "sd s7, 23*8(sp)",
-//         "sd s8, 24*8(sp)",
-//         "sd s9, 25*8(sp)",
-//         "sd s10, 26*8(sp)",
-//         "sd s11, 27*8(sp)",
-//         "sd t3, 28*8(sp)",
-//         "sd t4, 29*8(sp)",
-//         "sd t5, 30*8(sp)",
-//         "sd t6, 31*8(sp)",
-        
-//         // 跳转到异常处理函数
-//         "jal ra, trap_handler",
-//         // 恢复栈指针
-//         "li sp, {trap_context}",
 
-//         // 恢复上下文
-//         "ld ra, 1*8(sp)",
-//         "ld gp, 3*8(sp)",
-//         "ld tp, 4*8(sp)",
-//         "ld t0, 5*8(sp)",
-//         "ld t1, 6*8(sp)",
-//         "ld t2, 7*8(sp)",
-//         "ld s0, 8*8(sp)",
-//         "ld s1, 9*8(sp)",
-//         "ld a0, 10*8(sp)",
-//         "ld a1, 11*8(sp)",
-//         "ld a2, 12*8(sp)",
-//         "ld a3, 13*8(sp)",
-//         "ld a4, 14*8(sp)",
-//         "ld a5, 15*8(sp)",
-//         "ld a6, 16*8(sp)",
-//         "ld a7, 17*8(sp)",
-//         "ld s2, 18*8(sp)",
-//         "ld s3, 19*8(sp)",
-//         "ld s4, 20*8(sp)",
-//         "ld s5, 21*8(sp)",
-//         "ld s6, 22*8(sp)",
-//         "ld s7, 23*8(sp)",
-//         "ld s8, 24*8(sp)",
-//         "ld s9, 25*8(sp)",
-//         "ld s10, 26*8(sp)",
-//         "ld s11, 27*8(sp)",
-//         "ld t3, 28*8(sp)",
-//         "ld t4, 29*8(sp)",
-//         "ld t5, 30*8(sp)",
-//         "ld t6, 31*8(sp)",
+fn sbi_handler(ctx: &mut TrapContext) {
+    match ctx.x[17] {
+        SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
+        SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
+        _ => unimplemented!()
+    }
+}
 
-//         // 恢复栈指针并且返回
-//         "csrr sp. sscratch",
-//         "sret",
-
-//         trap_context = const TRAP_CONTEXT,
-//         options(noreturn),
-//     );
-// }
 
 #[no_mangle]
 pub fn trap_handler() -> ! {
-    let trap_ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
+    let ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
     let scause = scause::read();
     match scause.cause() {
         scause::Trap::Exception(scause::Exception::UserEnvCall) => {
-            // match trap_ctx.x[17] {
-            //     SBI_CONSOLE_PUTCHAR => console_putchar(trap_ctx.x[10]),
-            //     _ => unimplemented!()
-            // }
-            // trap_ctx.sepc += 4;
             panic!("U-mode/VU-mode env call from VS-mode?");
         },
         scause::Trap::Exception(scause::Exception::VirtualSupervisorEnvCall) => {
-            match trap_ctx.x[17] {
-                SBI_CONSOLE_PUTCHAR => console_putchar(trap_ctx.x[10]),
-                _ => unimplemented!()
-            }
-            trap_ctx.sepc += 4;
+            sbi_handler(ctx);
+            ctx.sepc += 4;
         }
         _ => unimplemented!()
     }

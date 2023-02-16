@@ -153,7 +153,7 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         // 创建 guest
         let guest = Guest::new(0, gpm);
         add_guest(guest);
-
+        hdebug!("Switch to guest......");
         // 切换上下文并跳转到 guest 执行
         unsafe{ switch_to_guest() }
     }else{

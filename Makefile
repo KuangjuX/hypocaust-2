@@ -29,7 +29,7 @@ QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 
 
 $(GUEST):
-	cd guest && make build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
+	cd guest && cargo build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
 
 
 $(GUEST_KERNEL_ELF):
@@ -38,7 +38,9 @@ $(GUEST_KERNEL_ELF):
 
 
 build: $(GUEST)
+	cp src/linker-qemu.ld src/linker.ld
 	cargo build $(GUEST_KERNEL_FEATURE)
+	rm src/linker.ld
 
 $(KERNEL_BIN): build 
 	$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@

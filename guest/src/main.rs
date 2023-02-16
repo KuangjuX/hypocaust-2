@@ -30,10 +30,10 @@ pub fn clear_bss() {
 pub fn rust_main() -> ! {
     clear_bss();
     println!("[kernel] Hello, Guest Kernel!");
-    // unsafe{ 
-    //     csrw_test();
-    //     csrr_test(); 
-    // }
+    unsafe{ 
+        csrw_test();
+        csrr_test(); 
+    }
     panic!("panic in rust_main.")
 }
 
