@@ -190,6 +190,20 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
         hpm
     }
 
+    pub fn map_guest(&mut self, start_pa: usize, gpm_size: usize) {
+        self.push(
+            MapArea::new(
+                start_pa.into(), 
+                (start_pa + gpm_size).into(), 
+                Some(start_pa.into()), 
+                Some((start_pa + gpm_size).into()), 
+                MapType::Linear, 
+                MapPermission::R | MapPermission::W
+            ), 
+            None
+        );
+    }
+
     pub fn new_guest(guest_data: &[u8], gpm_size: usize) -> Self {
         let mut memory_set = Self::new_guest_bare();
         let elf = xmas_elf::ElfFile::new(guest_data).unwrap();
@@ -254,14 +268,11 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             None
         );
         hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
-        memory_set
-    }
 
-    pub fn initialize_gpm(&mut self) {
-        // 映射跳板页与 MMIO
-        self.map_trampoline();
+        memory_set.map_trampoline();
+        
         for pair in MMIO {
-            self.push(
+            memory_set.push(
                 MapArea::new(
                     (*pair).0.into(),
                     ((*pair).0 + (*pair).1).into(),
@@ -273,7 +284,9 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                 None,
             );
         }
+        memory_set
     }
+
 
     /// 加载客户操作系统
     pub fn map_gpm(&mut self, guest_kernel_memory: &Self) {
@@ -312,6 +325,10 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
     /// 将虚拟页号翻译成页表项
     pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)
+    }
+
+    pub fn translate_va(&self, va: usize) -> Option<usize> {
+        self.page_table.translate_va(va)
     }
 }
 

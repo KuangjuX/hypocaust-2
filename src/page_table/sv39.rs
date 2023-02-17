@@ -120,7 +120,7 @@ impl PageTable for PageTableSv39 {
         let offset = va & 0xfff;
         let vpn = VirtPageNum::from(va >> 12);
         if let Some(pte) = self.translate(vpn) {
-            Some(pte.ppn().0 + offset)
+            Some(pte.ppn().0 << 12 + offset)
         }else{
             None
         }

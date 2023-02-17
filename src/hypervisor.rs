@@ -31,3 +31,34 @@ pub mod stack {
     }
 
 }
+
+use riscv::register::hvip;
+use crate::constants::csr::{hedeleg, hideleg};
+
+pub unsafe fn initialize_hypervisor() {
+    // hedeleg: delegate some synchronous exceptions
+    hedeleg::write(
+        hedeleg::INST_ADDR_MISALIGN |
+        hedeleg::BREAKPOINT | 
+        hedeleg::ENV_CALL_FROM_U_OR_VU | 
+        hedeleg::INST_PAGE_FAULT |
+        hedeleg::LOAD_PAGE_FAULT |
+        hedeleg::STORE_PAGE_FAULT
+    );
+
+    // hideleg: delegate all interrupts
+    hideleg::write(
+        hideleg::VSEIP |
+        hideleg::VSSIP | 
+        hideleg::VSTIP
+    );
+
+    // hvip: clear all interrupts
+    hvip::clear_vseip();
+    hvip::clear_vssip();
+    hvip::clear_vstip();
+
+
+    hdebug!("Initialize hypervisor environment");
+
+}

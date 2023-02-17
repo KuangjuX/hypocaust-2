@@ -10,7 +10,8 @@ lazy_static! {
     pub static ref SHARED_DATA: Mutex<SharedData<PageTableSv39>> = Mutex::new(
         SharedData {
             hpm: MemorySet::new_kernel(),
-            guests: BTreeMap::new()
+            guests: BTreeMap::new(),
+            guest_id: 0
         }
     );
 }
@@ -20,7 +21,8 @@ pub struct SharedData<P: PageTable + GuestPageTable> {
     /// hypervisor memory
     pub hpm: MemorySet<P>,
     /// all guest structs
-    pub guests: BTreeMap<usize, Guest<P>>
+    pub guests: BTreeMap<usize, Guest<P>>,
+    pub guest_id: usize
 }
 
 pub fn add_guest(guest: Guest<PageTableSv39>) {

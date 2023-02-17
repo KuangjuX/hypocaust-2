@@ -1,9 +1,12 @@
 use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
+use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
+// use crate::shared::SHARED_DATA;
+// use crate::guest::pmap::decode_inst_at_addr;
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc, vsatp };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -44,12 +47,38 @@ fn set_user_trap_entry() {
 }
 
 
-fn sbi_handler(ctx: &mut TrapContext) {
+fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
     match ctx.x[17] {
         SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
         SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
-        _ => unimplemented!()
+        _ => { return Err(VmmError::Unimplemented) }
     }
+    Ok(())
+}
+
+fn privileged_inst_handler(ctx: &mut TrapContext) -> VmmResult {
+    // let sharded_data = SHARED_DATA.lock();
+    // let guest_id = sharded_data.guest_id;
+    // if let Some(guest) = sharded_data.guests.get(&guest_id) {
+    //     let (_, inst) = decode_inst_at_addr(ctx.sepc, &guest.gpm);
+    //     drop(sharded_data);
+    //     let inst = inst.ok_or(VmmError::NoFound)?;
+    //     match inst {
+    //         riscv_decode::Instruction::Sret => {
+    //             ctx.sstatus.set_spp(sstatus::SPP::User);
+    //             ctx.sepc = vsepc::read();
+    //             Ok(())
+    //         },
+    //         _ => return Err(VmmError::Unimplemented)
+    //     }
+    // }else{
+    //     drop(sharded_data);
+    //     return Err(VmmError::NoFound)
+    // }
+    ctx.sstatus.set_spp(sstatus::SPP::User);
+    ctx.sepc = vsepc::read();
+    unsafe{ vsstatus::clear_spp() };
+    Ok(())
 }
 
 
@@ -58,17 +87,28 @@ pub fn trap_handler() -> ! {
     let ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
     let scause = scause::read();
     match scause.cause() {
-        scause::Trap::Exception(scause::Exception::UserEnvCall) => {
+        Trap::Exception(Exception::UserEnvCall) => {
             panic!("U-mode/VU-mode env call from VS-mode?");
         },
-        scause::Trap::Exception(scause::Exception::VirtualSupervisorEnvCall) => {
-            sbi_handler(ctx);
+        Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
+            if let Err(err) = sbi_handler(ctx) {
+                panic!("err: {:?}", err);
+            }
             ctx.sepc += 4;
         },
-        scause::Trap::Exception(scause::Exception::IllegalInstruction) => {
+        Trap::Exception(Exception::VirtualInstruction) => {
+            if let Err(err) = privileged_inst_handler(ctx) {
+                panic!("err: {:?}", err);
+            }
+        },
+        Trap::Exception(Exception::IllegalInstruction) => {
             // 无效指令，读/写 csr
             panic!("read/write CSR");
-        }
+        },
+        Trap::Exception(Exception::InstructionGuestPageFault) => panic!(
+            "InstructionGuestPageFault: sepc -> {:#x}, vsstatus -> {:#x}, vsatp: {:#x}", 
+            ctx.sepc, vsstatus::read().bits(), vsatp::read().bits()
+        ),
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
     unsafe{ switch_to_guest() }

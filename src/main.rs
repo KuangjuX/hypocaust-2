@@ -1,14 +1,11 @@
 #![no_std]
 #![no_main]
-#![feature(panic_info_message)]
-#![feature(alloc_error_handler)]
-#![feature(core_intrinsics)]
-#![allow(non_upper_case_globals)]
-#![allow(dead_code)] 
 #![deny(warnings)]
-#![feature(naked_functions)]
-#![feature(asm_const)]
-#![feature(stdsimd)]
+#![allow(non_upper_case_globals, dead_code)]
+#![feature(
+    panic_info_message, alloc_error_handler, core_intrinsics, naked_functions,
+    asm_const, stdsimd
+)]
 
 #[macro_use]
 extern crate bitflags;
@@ -32,18 +29,20 @@ mod trap;
 mod mm;
 mod guest;
 mod hypervisor;
+mod device_emu;
+mod error;
 
 
-use constants::PAGE_SIZE;
-use riscv::register::hvip;
-
+use crate::constants::PAGE_SIZE;
 use crate::mm::MemorySet;
-use crate::constants::layout::GUEST_DEFAULT_SIZE;
-use crate::constants::csr::{ hedeleg, hideleg };
+use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
-use crate::shared::add_guest;
+use crate::shared::{add_guest, SHARED_DATA};
 use crate::trap::switch_to_guest;
+use crate::hypervisor::initialize_hypervisor;
+
+pub use error::{ VmmError, VmmResult };
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
@@ -92,32 +91,6 @@ fn clear_bss() {
     }
 }
 
-unsafe fn initialize_hypervisor() {
-    // hedeleg: delegate some synchronous exceptions
-    hedeleg::write(
-        hedeleg::INST_ADDR_MISALIGN |
-        hedeleg::BREAKPOINT | 
-        hedeleg::ENV_CALL_FROM_U_OR_VU | 
-        hedeleg::INST_PAGE_FAULT |
-        hedeleg::LOAD_PAGE_FAULT |
-        hedeleg::STORE_PAGE_FAULT
-    );
-
-    // hideleg: delegate all interrupts
-    hideleg::write(
-        hideleg::VSEIP |
-        hideleg::VSSIP | 
-        hideleg::VSTIP
-    );
-
-    // hvip: clear all interrupts
-    hvip::clear_vseip();
-    hvip::clear_vssip();
-    hvip::clear_vstip();
-
-    hdebug!("Initialize hypervisor environment");
-
-}
 
 
 
@@ -140,20 +113,21 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         // initialize heap
         hyp_alloc::heap_init();
         // create guest memory set
-        let mut gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
+        let gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
+        let mut sharded_data = SHARED_DATA.lock();
+        sharded_data.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
+        drop(sharded_data);
         // hypervisor enable paging
         mm::enable_paging();
         // trap init
         trap::init();
         // memory translation test
         mm::remap_test();
-        // initialize guest memory
-        gpm.initialize_gpm();
-        // 创建 guest
+        // create guest struct
         let guest = Guest::new(0, gpm);
         add_guest(guest);
         hdebug!("Switch to guest......");
-        // 切换上下文并跳转到 guest 执行
+        // switch context and jump to guest
         unsafe{ switch_to_guest() }
     }else{
         unreachable!()
