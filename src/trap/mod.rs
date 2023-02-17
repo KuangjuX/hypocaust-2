@@ -6,7 +6,7 @@ use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, cons
 // use crate::shared::SHARED_DATA;
 // use crate::guest::pmap::decode_inst_at_addr;
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc, vsatp };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc,  hgatp };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -105,10 +105,13 @@ pub fn trap_handler() -> ! {
             // 无效指令，读/写 csr
             panic!("read/write CSR");
         },
-        Trap::Exception(Exception::InstructionGuestPageFault) => panic!(
-            "InstructionGuestPageFault: sepc -> {:#x}, vsstatus -> {:#x}, vsatp: {:#x}", 
-            ctx.sepc, vsstatus::read().bits(), vsatp::read().bits()
-        ),
+        Trap::Exception(Exception::InstructionGuestPageFault) => { 
+        herror!(
+            "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}", 
+            ctx.sepc, hgatp::read().bits()
+        );
+        loop{}
+    },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
     unsafe{ switch_to_guest() }
@@ -121,17 +124,18 @@ pub fn trap_handler() -> ! {
 pub unsafe fn switch_to_guest() -> ! {
     set_user_trap_entry();
     // 获取上下文切换环境
-    let trap_ctx = (TRAP_CONTEXT as *mut TrapContext).as_ref().unwrap();
+    let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
 
     // hgatp: set page table for guest physical address translation
-    if riscv::register::hgatp::read().bits() != trap_ctx.hgatp {
-        let hgatp = riscv::register::hgatp::Hgatp::from_bits(trap_ctx.hgatp);
+    if riscv::register::hgatp::read().bits() != ctx.hgatp {
+        let hgatp = riscv::register::hgatp::Hgatp::from_bits(ctx.hgatp);
         hgatp.write(); 
         core::arch::riscv64::hfence_gvma(0, 0);
         assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
     }
     // hstatus: handle SPV change the virtualization mode to 0 after sret
     riscv::register::hstatus::set_spv();
+    ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
 
     // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret
     riscv::register::sstatus::set_spp(riscv::register::sstatus::SPP::Supervisor);
@@ -146,7 +150,7 @@ pub unsafe fn switch_to_guest() -> ! {
             "jr {restore_va}",             // jump to new addr of __restore asm function
             restore_va = in(reg) restore_va,
             in("a0") TRAP_CONTEXT,           // a0 = virt addr of Trap Context
-            in("a1") trap_ctx.hgatp,        // a1 = phy addr of usr page table
+            in("a1") ctx.hgatp,        // a1 = phy addr of usr page table
             options(noreturn)
         );
     }
