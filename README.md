@@ -2,8 +2,8 @@
 Hypocaust-2 is a type-1 hypervisor with H extension run on RISC-V machine. It depends on the RISC -V H extension, which currently runs on QEMU 7.0 or above.
 
 ## Environment
-- QEMU 7.0.0
-- RustSBI-QEMU version 0.2.0-alpha.2
+- QEMU 7.2.0
+- RustSBI-QEMU Prereleased 2023-02-01
 - Rust 1.66.0 
 
 ## Build
