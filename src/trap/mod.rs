@@ -2,12 +2,14 @@ use core::arch::{ global_asm, asm };
 
 use crate::constants::csr::hcounteren;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
+use crate::guest::pmap::two_stage_translation;
+use crate::shared::SHARED_DATA;
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
 // use crate::shared::SHARED_DATA;
 // use crate::guest::pmap::decode_inst_at_addr;
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc,  hgatp };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc,  hgatp, vsatp };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -111,6 +113,12 @@ pub fn trap_handler() -> ! {
             "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}", 
             ctx.sepc, hgatp::read().bits()
         );
+        let shareded_data = SHARED_DATA.lock();
+        let guest_id = shareded_data.guest_id;
+        let gpm = &shareded_data.guests.get(&guest_id).unwrap().gpm;
+        if let Some(host_va) = two_stage_translation(0, ctx.sepc, vsatp::read().bits(), gpm) {
+            herror!("host va: {:#x}", host_va);
+        }
         loop{}
     },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)

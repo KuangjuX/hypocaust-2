@@ -19,9 +19,9 @@ GUEST_KERNEL_FEATURE:=$(if $(GUEST_KERNEL_ELF), --features embed_guest_kernel, )
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
-QEMUPATH	:= ~/software/qemu/qemu-7.2.0/build/
+QEMUPATH	:= ~/software/qemu/qemu-salus/build/
 QEMU 		:= $(QEMUPATH)qemu-system-riscv64
-BOOTLOADER	:= bootloader/rustsbi-qemu.bin
+BOOTLOADER	:= bootloader/fw_payload.bin
 
 KERNEL_ENTRY_PA := 0x80200000
 

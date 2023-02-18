@@ -126,13 +126,13 @@ impl PageTable for PageTableSv39 {
         }
     }
 
-    fn walk_page_table(root: usize, va: usize) -> Option<PageWalk> {
+    fn walk_page_table<R: Fn(usize) -> usize>(root: usize, va: usize, read_pte: R) -> Option<PageWalk> {
         let mut path = Vec::new();
         let mut page_table = root;
         for level in 0..3 {
             let pte_index = (va >> (30 - 9 * level)) & 0x1ff;
             let pte_addr = page_table + pte_index * 8;
-            let pte = unsafe{ core::ptr::read(pte_addr as *const usize) };
+            let pte = read_pte(pte_addr);
             let level = match level {
                 0 => PageTableLevel::Level1GB,
                 1 => PageTableLevel::Level2MB,
