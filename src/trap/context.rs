@@ -1,4 +1,4 @@
-use riscv::register::sstatus::{self, SPP, Sstatus};
+use riscv::register::{sstatus::{self, SPP, Sstatus}, hstatus::{Hstatus, self}};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -16,6 +16,7 @@ pub struct TrapContext {
     pub kernel_sp: usize,
     /// Addr of trap_handler function
     pub trap_handler: usize,
+    pub hstatus: Hstatus
 }
 
 impl TrapContext {
@@ -35,6 +36,8 @@ impl TrapContext {
         let mut sstatus = sstatus::read();
         // 这里需要注意，进入 VS 态的时候需要将 sstatus 的 SPP 设置为 Supervisor
         sstatus.set_spp(SPP::Supervisor); 
+        let mut hstatus = hstatus::read();
+        hstatus.set_spv(true);
         let mut cx = Self {
             x: [0; 32],
             sstatus,
@@ -42,6 +45,7 @@ impl TrapContext {
             hgatp,  // addr of page table
             kernel_sp,    // kernel stack
             trap_handler, // addr of trap_handler function
+            hstatus
         };
         cx.set_sp(sp); // app's user stack pointer
         cx // return initial Trap Context of app

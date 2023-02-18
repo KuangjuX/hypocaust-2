@@ -39,6 +39,9 @@ __alltraps:
     ld t0, 34*8(sp)
     # 加载 hypervisor trap handler 地址到 t1 寄存器
     ld t1, 36*8(sp)
+    # 存储 hstatus 寄存器
+    csrr t0, hstatus
+    ld t0, 37*8(sp)
     # 切换栈寄存器
     ld sp, 35*8(sp)
     # 由 VS guest 跳转到 HS hypervisor, 不需要切换页表
@@ -57,6 +60,9 @@ __restore:
     ld t1, 33*8(sp)
     csrw sstatus, t0
     csrw sepc, t1
+    # 恢复 hstatus 寄存器
+    ld t0, 37*8(sp)
+    csrw hstatus, t0
     # restore general purpose registers except x0/sp/tp
     ld x1, 1*8(sp)
     ld x3, 3*8(sp)

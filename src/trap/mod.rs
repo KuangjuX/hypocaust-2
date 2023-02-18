@@ -143,7 +143,9 @@ pub unsafe fn switch_to_guest() -> ! {
         assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
     }
     // hstatus: handle SPV change the virtualization mode to 0 after sret
-    riscv::register::hstatus::set_spv();
+    // riscv::register::hstatus::set_spv();
+    // riscv::register::hstatus::set_hu();
+    // hdebug!("hstatus: {:#x}", riscv::register::hstatus::read().bits());
     hcounteren::write(0xffff_ffff);
 
     ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
