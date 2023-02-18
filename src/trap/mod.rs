@@ -1,5 +1,6 @@
 use core::arch::{ global_asm, asm };
 
+use crate::constants::csr::hcounteren;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
@@ -135,6 +136,8 @@ pub unsafe fn switch_to_guest() -> ! {
     }
     // hstatus: handle SPV change the virtualization mode to 0 after sret
     riscv::register::hstatus::set_spv();
+    hcounteren::write(0xffff_ffff);
+
     ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
 
     // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret

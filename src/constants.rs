@@ -325,4 +325,15 @@ pub mod csr {
             )
         }
     }
+
+    pub mod hcounteren {
+        use core::arch::asm;
+
+        pub unsafe fn write(hcounteren: u32) {
+            asm!(
+                "csrw hcounteren, {}",
+                in(reg) hcounteren
+            )
+        }
+    }
 }
