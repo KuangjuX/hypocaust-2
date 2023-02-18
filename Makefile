@@ -20,7 +20,7 @@ OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
 QEMUPATH	:= ~/software/qemu/qemu-7.2.0/build/
-QEMU 		:= $(QEMUPAEH)qemu-system-riscv64
+QEMU 		:= $(QEMUPATH)qemu-system-riscv64
 BOOTLOADER	:= bootloader/rustsbi-qemu.bin
 
 KERNEL_ENTRY_PA := 0x80200000
