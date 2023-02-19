@@ -29,8 +29,8 @@ make qemu
 - [x] Guest enable paging & setup 2-stage page table translation.
 - [x] Jump VU mode and run user applications
 - [x] Timers
+- [x] Passthrough virtio block device
 - [ ] IOMMU enabled
-- [ ] Passthrough virtio block and networkd devices
 - [ ] Expose and/or emulate peripherals
 - [ ] run rCore-Tutorial-v3/xv6-riscv
 - [ ] run RT-Thread
