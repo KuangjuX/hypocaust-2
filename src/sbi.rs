@@ -6,6 +6,10 @@ use core::arch::asm;
 pub const SBI_CONSOLE_PUTCHAR: usize = 1;
 pub const SBI_CONSOLE_GETCHAR: usize = 2;
 
+pub mod leagcy {
+    pub const SBI_SET_TIMER: usize = 0;
+}
+
 
 #[inline(always)]
 /// general sbi call

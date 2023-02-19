@@ -27,7 +27,7 @@ make qemu
 - [ ] Handle SBI calls
 - [x] Guest enable paging & setup 2-stage page table translation.
 - [x] Jump VU mode and run user applications
-- [ ] Timers
+- [x] Timers
 - [ ] IOMMU enabled
 - [ ] Passthrough virtio block and networkd devices
 - [ ] Expose and/or emulate peripherals

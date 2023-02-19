@@ -2,9 +2,10 @@ use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::guest::pmap::two_stage_translation;
+use crate::sbi::leagcy::SBI_SET_TIMER;
 use crate::shared::SHARED_DATA;
 use crate::{ VmmError, VmmResult };
-use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
+use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp };
 use riscv::register::scause::{ Trap, Exception };
@@ -51,6 +52,7 @@ fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
     match ctx.x[17] {
         SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
         SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
+        SBI_SET_TIMER => set_timer(ctx.x[10]),
         _ => { return Err(VmmError::Unimplemented) }
     }
     Ok(())
