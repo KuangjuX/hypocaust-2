@@ -21,7 +21,7 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
 QEMUPATH	:= ~/software/qemu/qemu-7.2.0/build/
 QEMU 		:= $(QEMUPATH)qemu-system-riscv64
-BOOTLOADER	:= bootloader/fw_payload.bin
+BOOTLOADER	:= bootloader/rustsbi-qemu.bin
 
 KERNEL_ENTRY_PA := 0x80200000
 
