@@ -1,5 +1,9 @@
 # hypocaust-2
-Hypocaust-2 is a type-1 hypervisor with H extension run on RISC-V machine. It depends on the RISC -V H extension, which currently runs on QEMU 7.2.0 or above.
+Hypocaust-2 is an experimental type-1 hypervisor with H extension run on RISC-V machine. It depends on the RISC -V H extension, which currently runs on QEMU 7.2.0 or above.  
+  
+My plan is to build a high-performance riscv64 hypervisor that physically maps the cpu cores, so there is no need to schedule guests in the hypervisor. In addition, the passthrough method for IO devices has achieved good performance.  
+  
+The purpose of this project is to run on bare metal or embedded devices, but it is not ruled out that kvm technology will be used and run on linux in the future.
 
 ## Environment
 - QEMU 7.2.0
@@ -23,6 +27,7 @@ make qemu
 - [x] Guest enable paging & setup 2-stage page table translation.
 - [x] Jump VU mode and run user applications
 - [ ] Timers
+- [ ] IOMMU enabled
 - [ ] Passthrough virtio block and networkd devices
 - [ ] Expose and/or emulate peripherals
 - [ ] run rCore-Tutorial-v3/xv6-riscv
