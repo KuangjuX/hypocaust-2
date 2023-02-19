@@ -57,6 +57,7 @@ qemu: $(KERNEL_BIN)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
+	rm $(FS_IMG)
 	cargo clean 
 	rm $(GUEST)
 	cd guest && cargo clean
