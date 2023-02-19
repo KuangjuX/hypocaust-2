@@ -1,4 +1,5 @@
 # hypocaust-2
+## Overview
 Hypocaust-2 is an experimental type-1 hypervisor with H extension run on RISC-V machine. It depends on the RISC -V H extension, which currently runs on QEMU 7.2.0 or above. It is the successor of the [hypocaust](https://github.com/KuangjuX/hypocaust) project.  
 
   
@@ -24,7 +25,7 @@ make qemu
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
 - [x] Run a tiny kernel that does not require any external hardware like disk devices.
 - [x] Handle read/write requests for CSRs from a guest
-- [ ] Handle SBI calls
+- [x] Handle SBI calls(currently only `console_putchar`, `console_getchar` and `set_timer`)
 - [x] Guest enable paging & setup 2-stage page table translation.
 - [x] Jump VU mode and run user applications
 - [x] Timers
