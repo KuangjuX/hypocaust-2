@@ -1,6 +1,6 @@
 use core::arch::{ global_asm, asm };
 
-use crate::constants::csr::hcounteren;
+// use crate::constants::csr::hcounteren;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::guest::pmap::two_stage_translation;
 use crate::shared::SHARED_DATA;
@@ -144,14 +144,9 @@ pub unsafe fn switch_to_guest() -> ! {
     }
     // hstatus: handle SPV change the virtualization mode to 0 after sret
     // riscv::register::hstatus::set_spv();
-    // riscv::register::hstatus::set_hu();
-    // hdebug!("hstatus: {:#x}", riscv::register::hstatus::read().bits());
-    hcounteren::write(0xffff_ffff);
+    // hcounteren::write(0xffff_ffff);
 
-    ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
-
-    // sstatus: handle SPP to 1 to change the privilege to S-Mode after sret
-    riscv::register::sstatus::set_spp(riscv::register::sstatus::SPP::Supervisor);
+    // ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
     extern "C" {
         fn __alltraps();
         fn __restore();

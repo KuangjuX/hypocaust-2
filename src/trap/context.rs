@@ -36,6 +36,7 @@ impl TrapContext {
         let mut sstatus = sstatus::read();
         // 这里需要注意，进入 VS 态的时候需要将 sstatus 的 SPP 设置为 Supervisor
         sstatus.set_spp(SPP::Supervisor); 
+        // sstatus.set_spp(SPP::User);
         let mut hstatus = hstatus::read();
         hstatus.set_spv(true);
         let mut cx = Self {
