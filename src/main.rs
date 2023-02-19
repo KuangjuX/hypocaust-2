@@ -34,6 +34,7 @@ mod error;
 
 
 use crate::constants::PAGE_SIZE;
+// use crate::hypervisor::fdt::MachineMeta;
 use crate::mm::MemorySet;
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
@@ -101,6 +102,7 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
         clear_bss();
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
+        // let meta = MachineMeta::parse(dtb);
         // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
             panic!("no HSM extension exist on current SBI environment");
