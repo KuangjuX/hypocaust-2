@@ -6,7 +6,7 @@ use riscv::register::{sstatus::{self, SPP, Sstatus}, hstatus::{Hstatus, self}};
 pub struct TrapContext {
     /// general regs[0..31]
     pub x: [usize; 32],
-    /// CSR hstatus      
+    /// CSR sstatus      
     pub sstatus: Sstatus,
     /// CSR sepc
     pub sepc: usize,
@@ -16,6 +16,7 @@ pub struct TrapContext {
     pub kernel_sp: usize,
     /// Addr of trap_handler function
     pub trap_handler: usize,
+    /// CSR hstatus
     pub hstatus: Hstatus
 }
 
@@ -36,7 +37,6 @@ impl TrapContext {
         let mut sstatus = sstatus::read();
         // 这里需要注意，进入 VS 态的时候需要将 sstatus 的 SPP 设置为 Supervisor
         sstatus.set_spp(SPP::Supervisor); 
-        // sstatus.set_spp(SPP::User);
         let mut hstatus = hstatus::read();
         hstatus.set_spv(true);
         let mut cx = Self {

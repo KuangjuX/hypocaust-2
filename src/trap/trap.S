@@ -41,7 +41,7 @@ __alltraps:
     ld t1, 36*8(sp)
     # 存储 hstatus 寄存器
     csrr t0, hstatus
-    ld t0, 37*8(sp)
+    sd t0, 37*8(sp)
     # 切换栈寄存器
     ld sp, 35*8(sp)
     # 由 VS guest 跳转到 HS hypervisor, 不需要切换页表

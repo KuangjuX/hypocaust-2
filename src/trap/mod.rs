@@ -1,15 +1,12 @@
 use core::arch::{ global_asm, asm };
 
-// use crate::constants::csr::hcounteren;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::guest::pmap::two_stage_translation;
 use crate::shared::SHARED_DATA;
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar};
-// use crate::shared::SHARED_DATA;
-// use crate::guest::pmap::decode_inst_at_addr;
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, vsstatus, sstatus, vsepc,  hgatp, vsatp };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -59,7 +56,7 @@ fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
     Ok(())
 }
 
-fn privileged_inst_handler(ctx: &mut TrapContext) -> VmmResult {
+fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
     // let sharded_data = SHARED_DATA.lock();
     // let guest_id = sharded_data.guest_id;
     // if let Some(guest) = sharded_data.guests.get(&guest_id) {
@@ -78,9 +75,6 @@ fn privileged_inst_handler(ctx: &mut TrapContext) -> VmmResult {
     //     drop(sharded_data);
     //     return Err(VmmError::NoFound)
     // }
-    ctx.sstatus.set_spp(sstatus::SPP::User);
-    ctx.sepc = vsepc::read();
-    unsafe{ vsstatus::clear_spp() };
     Ok(())
 }
 
@@ -105,7 +99,7 @@ pub fn trap_handler() -> ! {
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
-            // 无效指令，读/写 csr
+            // Invalid instruction, read/write csr
             panic!("read/write CSR");
         },
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
@@ -116,10 +110,12 @@ pub fn trap_handler() -> ! {
         let shareded_data = SHARED_DATA.lock();
         let guest_id = shareded_data.guest_id;
         let gpm = &shareded_data.guests.get(&guest_id).unwrap().gpm;
-        if let Some(host_va) = two_stage_translation(0, ctx.sepc, vsatp::read().bits(), gpm) {
+        if let Some(host_va) = two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm) {
             herror!("host va: {:#x}", host_va);
+        }else{
+            herror!("Fail to translate exception pc.");
         }
-        loop{}
+        panic!()
     },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
@@ -139,14 +135,10 @@ pub unsafe fn switch_to_guest() -> ! {
     if riscv::register::hgatp::read().bits() != ctx.hgatp {
         let hgatp = riscv::register::hgatp::Hgatp::from_bits(ctx.hgatp);
         hgatp.write(); 
-        core::arch::riscv64::hfence_gvma(0, 0);
+        core::arch::riscv64::hfence_gvma_all();
         assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
     }
-    // hstatus: handle SPV change the virtualization mode to 0 after sret
-    // riscv::register::hstatus::set_spv();
-    // hcounteren::write(0xffff_ffff);
 
-    // ctx.sstatus.set_spp(sstatus::SPP::Supervisor);
     extern "C" {
         fn __alltraps();
         fn __restore();
@@ -158,7 +150,6 @@ pub unsafe fn switch_to_guest() -> ! {
             "jr {restore_va}",             // jump to new addr of __restore asm function
             restore_va = in(reg) restore_va,
             in("a0") TRAP_CONTEXT,           // a0 = virt addr of Trap Context
-            in("a1") ctx.hgatp,        // a1 = phy addr of usr page table
             options(noreturn)
         );
     }

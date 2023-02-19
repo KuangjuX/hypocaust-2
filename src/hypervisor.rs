@@ -33,7 +33,7 @@ pub mod stack {
 }
 
 use riscv::register::hvip;
-use crate::constants::csr::{hedeleg, hideleg};
+use crate::constants::csr::{hedeleg, hideleg, hcounteren};
 
 pub unsafe fn initialize_hypervisor() {
     // hedeleg: delegate some synchronous exceptions
@@ -58,6 +58,7 @@ pub unsafe fn initialize_hypervisor() {
     hvip::clear_vssip();
     hvip::clear_vstip();
 
+    hcounteren::write(0xffff_ffff);
 
     hdebug!("Initialize hypervisor environment");
 

@@ -25,6 +25,9 @@ make qemu
 - [ ] Timers
 - [ ] Passthrough virtio block and networkd devices
 - [ ] Expose and/or emulate peripherals
+- [ ] run rCore-Tutorial-v3/xv6-riscv
+- [ ] run RT-Thread
+- [ ] run Linux
 - [ ] multicore supported
 - [ ] multiguest supported
 

@@ -66,8 +66,9 @@ pub mod pmap {
 
     pub fn two_stage_translation<P: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize, gpm: &MemorySet<P>) -> Option<usize> {
         let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
+        htracking!("guest root: {:#x}, vsatp: {:#x}", guest_root, vsatp);
         if let Some(translation) = translate_guest_va::<P>(guest_id, guest_root, guest_va) {
-            let guest_pa =translation.guest_pa;
+            let guest_pa = translation.guest_pa;
             if let Some(host_va) = gpm.translate_va(guest_pa) {
                 Some(host_va)
             }else{

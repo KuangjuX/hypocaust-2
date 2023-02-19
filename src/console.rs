@@ -51,7 +51,7 @@ macro_rules! hwarning {
 #[macro_export]
 macro_rules! htracking {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("[Tracking] ", $fmt, "\n") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[1;32m[Tracking] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
     }
 }
 
