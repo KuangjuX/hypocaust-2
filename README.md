@@ -31,6 +31,10 @@ make qemu
 - [ ] multicore supported
 - [ ] multiguest supported
 
+## Tips
+- When the hypervisor is initialized, it is necessary to write the `hcounteren` register to all 1, because it is possible to read the `tim` register in VU mode or VS mode
+- When the hypervisor initializes the memory for the guest, it needs to set all the mapping flags of the guest memory to RWX, although it needs to be modified in the end. Otherwise, when the guest allocates memory for the application, it will not be executable, causing `InstructionGuestPageFault`.
+
 ## Design Docs
 - [Trap Design](docs/trap.md)
 - [Guest Page Table Design](docs/guest_page_table.md)
