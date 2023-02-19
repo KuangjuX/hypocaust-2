@@ -30,8 +30,9 @@ make qemu
 - [x] Jump VU mode and run user applications
 - [x] Timers
 - [x] Passthrough virtio block device
-- [ ] IOMMU enabled
+- [ ] Configure hypervisor and guest memory addresses and peripheral space mapping using the fdt tool
 - [ ] Expose and/or emulate peripherals
+- [ ] IOMMU enabled
 - [ ] run rCore-Tutorial-v3/xv6-riscv
 - [ ] run RT-Thread
 - [ ] run Linux
