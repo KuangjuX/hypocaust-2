@@ -29,6 +29,9 @@ QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 QEMUOPTS	+=-drive file=$(FS_IMG),if=none,format=raw,id=x0
 QEMUOPTS	+=-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+QEMUOPTS	+=-device virtio-gpu-device
+QEMUOPTS	+=-device virtio-keyboard-device
+QEMUOPTS	+=-device virtio-mouse-device
 
 
 # $(GUEST):
