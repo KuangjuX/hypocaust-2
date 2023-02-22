@@ -7,6 +7,9 @@ use crate::trap::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
 
+mod context;
+
+
 pub struct Guest<P: PageTable + GuestPageTable> {
     pub gpm: MemorySet<P>,
     pub guest_id: usize
@@ -34,6 +37,11 @@ impl<P: PageTable + GuestPageTable> Guest<P> {
             guest_id,
             gpm
         }
+    }
+
+
+    pub fn run(&mut self) {
+        todo!()
     }
 }
 
@@ -95,4 +103,8 @@ pub mod pmap {
     //     }
     // }
 }
+
+
+
+
 

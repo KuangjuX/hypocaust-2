@@ -16,6 +16,7 @@ spin = "0.9.4"
 riscv-decode = { git = "https://github.com/KuangjuX/riscv-decode.git" }
 fdt = { version = "0.1.5" }
 arrayvec = { version = "0.7.2", default-features = false }
+memoffset = { version = ">=0.6.5", features = ["unstable_const"] }
 
 
 [features]
