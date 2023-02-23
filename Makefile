@@ -19,7 +19,7 @@ GUEST_KERNEL_FEATURE:=$(if $(GUEST_KERNEL_ELF), --features embed_guest_kernel, )
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
-QEMUPATH	:= ~/software/qemu/qemu-7.2.0/build/
+QEMUPATH	:= ~/software/qemu/qemu-7.1.0/build/
 QEMU 		:= $(QEMUPATH)qemu-system-riscv64
 BOOTLOADER	:= bootloader/rustsbi-qemu.bin
 
@@ -32,6 +32,8 @@ QEMUOPTS	+=-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 QEMUOPTS	+=-device virtio-gpu-device
 QEMUOPTS	+=-device virtio-keyboard-device
 QEMUOPTS	+=-device virtio-mouse-device
+QEMUOPTS 	+=-device virtio-net-device,netdev=net0
+QEMUOPTS	+=-netdev user,id=net0,hostfwd=udp::6200-:2000
 
 
 # $(GUEST):

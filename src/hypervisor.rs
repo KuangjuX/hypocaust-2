@@ -14,7 +14,7 @@ pub mod stack {
     pub fn hstack_alloc(guest_id: usize) -> HypervisorStack {
         let (hstack_bottom, hstack_top) = hstack_position(guest_id);
         hdebug!("allocated hstack: [{:#x}: {:#x})",hstack_bottom, hstack_top);
-        let mut sharded_data = SHARED_DATA.lock();
+        let mut sharded_data = unsafe{ SHARED_DATA.get_mut().unwrap().lock() };
         sharded_data.hpm.insert_framed_area(
             hstack_bottom.into(),
             hstack_top.into(),
@@ -49,7 +49,9 @@ pub struct MachineMeta{
     pub physical_memory_offset: usize,
     pub physical_memory_size: usize,
 
-    pub virtio: ArrayVec<Device, 16>
+    pub virtio: ArrayVec<Device, 16>,
+
+    pub test_finisher_address: Option<Device>,
 }
 
 impl MachineMeta {
@@ -81,6 +83,16 @@ impl MachineMeta {
             }
         }
         meta.virtio.sort_unstable_by_key(|v| v.base_address);
+
+        // probe virt test
+        for node in fdt.find_all_nodes("/soc/test") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                hdebug!("test addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.test_finisher_address = Some(Device { base_address: base_addr, size});
+            }
+        }
         meta
     }
 }

@@ -7,9 +7,10 @@ use crate::page_table::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 use crate::page_table::{StepByOne, VPNRange, PPNRange};
 use crate::constants::{
     PAGE_SIZE,
-    layout::{ TRAMPOLINE, TRAP_CONTEXT, MMIO, MEMORY_END, GUEST_START_PA, GUEST_START_VA }
+    layout::{ TRAMPOLINE, TRAP_CONTEXT, MEMORY_END, GUEST_START_PA, GUEST_START_VA }
 };
 use crate::shared::SHARED_DATA;
+use crate::hypervisor::fdt::MachineMeta;
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::arch::asm;
@@ -93,7 +94,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
     /// Without kernel stacks.
     /// 内核虚拟地址映射
     /// 映射了内核代码段和数据段以及跳板页，没有映射内核栈
-    pub fn new_kernel() -> Self {
+    pub fn new_kernel(machine: &MachineMeta) -> Self {
         let mut hpm = Self::new_bare();
         // map trampoline
         hpm.map_trampoline();
@@ -173,20 +174,33 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             None,
         );
 
-        for pair in MMIO {
+        if let Some(test) = &machine.test_finisher_address {
             hpm.push(
                 MapArea::new(
-                    (*pair).0.into(),
-                    ((*pair).0 + (*pair).1).into(),
-                    Some((*pair).0.into()),
-                    Some(((*pair).0 + (*pair).1).into()),
+                    test.base_address.into(),
+                    (test.base_address + test.size).into(),
+                    Some(test.base_address.into()),
+                    Some((test.base_address + test.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W,
+                ), 
+                None
+            );
+        }
+
+        for virtio_dev in machine.virtio.iter() {
+            hpm.push(
+                MapArea::new(
+                    virtio_dev.base_address.into(),
+                    (virtio_dev.base_address + virtio_dev.size).into(),
+                    Some(virtio_dev.base_address.into()),
+                    Some((virtio_dev.base_address + virtio_dev.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W,
                 ),
                 None,
-            );
+            )
         }
-
         hpm
     }
 
@@ -204,8 +218,8 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
         );
     }
 
-    pub fn new_guest(guest_data: &[u8], gpm_size: usize) -> Self {
-        let mut memory_set = Self::new_guest_bare();
+    pub fn new_guest(guest_data: &[u8], gpm_size: usize, machine: &MachineMeta) -> Self {
+        let mut gpm = Self::new_guest_bare();
         let elf = xmas_elf::ElfFile::new(guest_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
@@ -248,7 +262,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                     map_perm
                 );
                 last_paddr = paddr;
-                memory_set.push(map_area, None);
+                gpm.push(map_area, None);
             }
             
         }
@@ -257,7 +271,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
         let guest_end_pa = GUEST_START_PA + gpm_size;
         let guest_end_va = GUEST_START_VA + gpm_size; 
         // 映射其他物理内存
-        memory_set.push(MapArea::new(
+        gpm.push(MapArea::new(
                 VirtAddr(offset + GUEST_START_VA), 
                 VirtAddr(guest_end_va), 
                 Some(PhysAddr(paddr as usize)), 
@@ -269,22 +283,37 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
         );
         hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
 
-        memory_set.map_trampoline();
+        gpm.map_trampoline();
         
-        for pair in MMIO {
-            memory_set.push(
+        
+        if let Some(test) = &machine.test_finisher_address {
+            gpm.push(
                 MapArea::new(
-                    (*pair).0.into(),
-                    ((*pair).0 + (*pair).1).into(),
-                    Some((*pair).0.into()),
-                    Some(((*pair).0 + (*pair).1).into()),
+                    test.base_address.into(),
+                    (test.base_address + test.size).into(),
+                    Some(test.base_address.into()),
+                    Some((test.base_address + test.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        for virtio_dev in machine.virtio.iter() {
+            gpm.push(
+                MapArea::new(
+                    virtio_dev.base_address.into(),
+                    (virtio_dev.base_address + virtio_dev.size).into(),
+                    Some(virtio_dev.base_address.into()),
+                    Some((virtio_dev.base_address + virtio_dev.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
                 ),
                 None,
-            );
+            )
         }
-        memory_set
+        gpm
     }
 
 
@@ -472,7 +501,7 @@ bitflags! {
 
 #[allow(unused)]
 pub fn remap_test() {
-    let sharded_data = SHARED_DATA.lock();
+    let sharded_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
     let kernel_space = &sharded_data.hpm;
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();

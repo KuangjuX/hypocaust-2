@@ -43,7 +43,9 @@ use crate::shared::{add_guest, SHARED_DATA};
 use crate::trap::switch_to_guest;
 use crate::hypervisor::initialize_hypervisor;
 
+use alloc::collections::BTreeMap;
 pub use error::{ VmmError, VmmResult };
+use spin::Mutex;
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
@@ -97,12 +99,11 @@ fn clear_bss() {
 
 
 #[no_mangle]
-fn hentry(hart_id: usize, dtb: usize) -> ! {
+unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         clear_bss();
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
-        // let meta = MachineMeta::parse(dtb);
         // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
             panic!("no HSM extension exist on current SBI environment");
@@ -111,12 +112,28 @@ fn hentry(hart_id: usize, dtb: usize) -> ! {
             panic!("no RISC-V hypervisor H extension on current environment")
         }
         hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
-        unsafe{ initialize_hypervisor() };
+        initialize_hypervisor();
+
         // initialize heap
         hyp_alloc::heap_init();
+        let machine = hypervisor::fdt::MachineMeta::parse(dtb);
+        // initialize shared data
+        let hpm = MemorySet::<PageTableSv39>::new_kernel(&machine);
+        SHARED_DATA.call_once(|| Mutex::new(
+            shared::SharedData { 
+                hpm,
+                guests: BTreeMap::new(),
+                guest_id: 0
+            }
+        ));
         // create guest memory set
-        let gpm = MemorySet::<PageTableSv39>::new_guest(&GUEST, GUEST_DEFAULT_SIZE);
-        let mut sharded_data = SHARED_DATA.lock();
+        let gpm = MemorySet::<PageTableSv39>::new_guest(
+            &GUEST, 
+            GUEST_DEFAULT_SIZE,
+            &machine
+        );
+
+        let mut sharded_data = SHARED_DATA.get_mut().unwrap().lock();
         sharded_data.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
         drop(sharded_data);
         // hypervisor enable paging

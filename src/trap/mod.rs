@@ -109,7 +109,7 @@ pub fn trap_handler() -> ! {
             "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}", 
             ctx.sepc, hgatp::read().bits()
         );
-        let shareded_data = SHARED_DATA.lock();
+        let shareded_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
         let guest_id = shareded_data.guest_id;
         let gpm = &shareded_data.guests.get(&guest_id).unwrap().gpm;
         if let Some(host_va) = two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm) {

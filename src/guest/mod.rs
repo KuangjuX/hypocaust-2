@@ -20,7 +20,7 @@ impl<P: PageTable + GuestPageTable> Guest<P> {
         // 分配 hypervisor 内核栈
         let hstack = hstack_alloc(guest_id);
         let hstack_top = hstack.get_top();
-        let shared_data = SHARED_DATA.lock();
+        let shared_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
         drop(shared_data);
         // 获取 trap context
         let trap_ctx: &mut TrapContext = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
