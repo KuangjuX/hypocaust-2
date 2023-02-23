@@ -285,7 +285,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
 
         gpm.map_trampoline();
         
-        
+        // map qemu test
         if let Some(test) = &machine.test_finisher_address {
             gpm.push(
                 MapArea::new(
@@ -300,6 +300,7 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             );
         }
 
+        // map virtio device
         for virtio_dev in machine.virtio.iter() {
             gpm.push(
                 MapArea::new(
@@ -313,6 +314,49 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
                 None,
             )
         }
+
+        if let Some(uart) = &machine.uart {
+            gpm.push(
+                MapArea::new(
+                    uart.base_address.into(),
+                    (uart.base_address + uart.size).into(),
+                    Some(uart.base_address.into()),
+                    Some((uart.base_address + uart.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        if let Some(clint) = &machine.clint {
+            gpm.push(
+                MapArea::new(
+                    clint.base_address.into(),
+                    (clint.base_address + clint.size).into(),
+                    Some(clint.base_address.into()),
+                    Some((clint.base_address + clint.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        if let Some(plic) = &machine.plic {
+            gpm.push(
+                MapArea::new(
+                    plic.base_address.into(),
+                    (plic.base_address + plic.size).into(),
+                    Some(plic.base_address.into()),
+                    Some((plic.base_address + plic.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
         gpm
     }
 

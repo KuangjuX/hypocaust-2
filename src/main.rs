@@ -147,7 +147,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         add_guest(guest);
         hdebug!("Switch to guest......");
         // switch context and jump to guest
-        unsafe{ switch_to_guest() }
+        switch_to_guest()
     }else{
         unreachable!()
     }

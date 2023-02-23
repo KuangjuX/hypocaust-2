@@ -52,6 +52,12 @@ pub struct MachineMeta{
     pub virtio: ArrayVec<Device, 16>,
 
     pub test_finisher_address: Option<Device>,
+
+    pub uart: Option<Device>,
+
+    pub clint: Option<Device>,
+
+    pub plic: Option<Device>
 }
 
 impl MachineMeta {
@@ -93,6 +99,37 @@ impl MachineMeta {
                 meta.test_finisher_address = Some(Device { base_address: base_addr, size});
             }
         }
+
+        // probe uart device
+        for node in fdt.find_all_nodes("/soc/uart") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                hdebug!("UART addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.uart = Some(Device { base_address: base_addr, size});
+            }
+        }
+
+        // probe clint(core local interrupter)
+        for node in fdt.find_all_nodes("/soc/clint") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                hdebug!("CLINT addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.clint = Some(Device { base_address: base_addr, size});
+            }
+        }
+
+        // probe plic
+        for node in fdt.find_all_nodes("/soc/plic") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                hdebug!("PLIC addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.plic = Some(Device { base_address: base_addr, size});
+            }
+        }
+
         meta
     }
 }

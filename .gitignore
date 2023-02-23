@@ -1,6 +1,5 @@
 /target
 guest.bin
 .gdb_history
-./guest.S
-./hyper.S
+./*.S
 fs.img
