@@ -24,7 +24,6 @@ mod page_table;
 mod constants;
 mod hyp_alloc;
 mod sync;
-mod shared;
 mod trap;
 mod mm;
 mod guest;
@@ -39,13 +38,10 @@ use crate::mm::MemorySet;
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
-use crate::shared::{add_guest, SHARED_DATA};
 use crate::trap::switch_to_guest;
-use crate::hypervisor::initialize_hypervisor;
+use crate::hypervisor::{ init_vmm, HOST_VMM, add_guest };
 
-use alloc::collections::BTreeMap;
 pub use error::{ VmmError, VmmResult };
-use spin::Mutex;
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
@@ -112,30 +108,25 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
             panic!("no RISC-V hypervisor H extension on current environment")
         }
         hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
-        initialize_hypervisor();
 
         // initialize heap
         hyp_alloc::heap_init();
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
+        // TODO: parse guest fdt
+        let guest_machine = machine.clone();
         // initialize shared data
         let hpm = MemorySet::<PageTableSv39>::new_kernel(&machine);
-        SHARED_DATA.call_once(|| Mutex::new(
-            shared::SharedData { 
-                hpm,
-                guests: BTreeMap::new(),
-                guest_id: 0
-            }
-        ));
+        init_vmm(hpm, machine);
         // create guest memory set
         let gpm = MemorySet::<PageTableSv39>::new_guest(
             &GUEST, 
             GUEST_DEFAULT_SIZE,
-            &machine
+            &guest_machine
         );
 
-        let mut sharded_data = SHARED_DATA.get_mut().unwrap().lock();
-        sharded_data.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
-        drop(sharded_data);
+        let mut host_vmm = HOST_VMM.get_mut().unwrap().lock();
+        host_vmm.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
+        drop(host_vmm);
         // hypervisor enable paging
         mm::enable_paging();
         // trap init

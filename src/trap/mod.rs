@@ -3,11 +3,11 @@ use core::arch::{ global_asm, asm };
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::guest::pmap::two_stage_translation;
 use crate::sbi::leagcy::SBI_SET_TIMER;
-use crate::shared::SHARED_DATA;
+use crate::hypervisor::HOST_VMM;
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -59,31 +59,19 @@ fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
 }
 
 fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
-    // let sharded_data = SHARED_DATA.lock();
-    // let guest_id = sharded_data.guest_id;
-    // if let Some(guest) = sharded_data.guests.get(&guest_id) {
-    //     let (_, inst) = decode_inst_at_addr(ctx.sepc, &guest.gpm);
-    //     drop(sharded_data);
-    //     let inst = inst.ok_or(VmmError::NoFound)?;
-    //     match inst {
-    //         riscv_decode::Instruction::Sret => {
-    //             ctx.sstatus.set_spp(sstatus::SPP::User);
-    //             ctx.sepc = vsepc::read();
-    //             Ok(())
-    //         },
-    //         _ => return Err(VmmError::Unimplemented)
-    //     }
-    // }else{
-    //     drop(sharded_data);
-    //     return Err(VmmError::NoFound)
-    // }
-    Ok(())
+    todo!()
+}
+
+
+pub fn guest_page_fault_handler(_ctx: &mut TrapContext) {
+    let addr = htval::read() << 2;
+    panic!("addr: {:#x}", addr);
 }
 
 
 #[no_mangle]
-pub fn trap_handler() -> ! {
-    let ctx = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
+pub unsafe fn trap_handler() -> ! {
+    let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
     let scause = scause::read();
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
@@ -105,23 +93,23 @@ pub fn trap_handler() -> ! {
             panic!("read/write CSR");
         },
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
-        herror!(
-            "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}", 
-            ctx.sepc, hgatp::read().bits()
-        );
-        let shareded_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
-        let guest_id = shareded_data.guest_id;
-        let gpm = &shareded_data.guests.get(&guest_id).unwrap().gpm;
-        if let Some(host_va) = two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm) {
-            herror!("host va: {:#x}", host_va);
-        }else{
-            herror!("Fail to translate exception pc.");
-        }
-        panic!()
+            let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+            let guest_id = host_vmm.guest_id;
+            let gpm = &host_vmm.guests.get(&guest_id).unwrap().gpm;
+            if let Some(host_va) = two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm) {
+                herror!("host va: {:#x}", host_va);
+            }else{
+                herror!("Fail to translate exception pc.");
+            }
+            panic!(
+                "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}", 
+                ctx.sepc, hgatp::read().bits()
+            );
     },
+    Trap::Exception(Exception::LoadGuestPageFault) | Trap::Exception(Exception::StoreGuestPageFault) => guest_page_fault_handler(ctx),
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
-    unsafe{ switch_to_guest() }
+    switch_to_guest()
 }
 
 #[no_mangle]

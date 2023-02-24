@@ -2,7 +2,8 @@ pub mod stack {
     use crate::{constants::{
         PAGE_SIZE, KERNEL_STACK_SIZE,
         layout::TRAP_CONTEXT
-    }, shared::SHARED_DATA, mm::MapPermission};
+    }, mm::MapPermission};
+    use super::HOST_VMM;
     pub struct HypervisorStack(pub usize);
 
     pub fn hstack_position(guest_id: usize) -> (usize, usize) {
@@ -14,8 +15,8 @@ pub mod stack {
     pub fn hstack_alloc(guest_id: usize) -> HypervisorStack {
         let (hstack_bottom, hstack_top) = hstack_position(guest_id);
         hdebug!("allocated hstack: [{:#x}: {:#x})",hstack_bottom, hstack_top);
-        let mut sharded_data = unsafe{ SHARED_DATA.get_mut().unwrap().lock() };
-        sharded_data.hpm.insert_framed_area(
+        let mut host_vmm = unsafe{ HOST_VMM.get_mut().unwrap().lock() };
+        host_vmm.hpm.insert_framed_area(
             hstack_bottom.into(),
             hstack_top.into(),
             MapPermission::R | MapPermission::W
@@ -137,10 +138,39 @@ impl MachineMeta {
 
 }
 
-use riscv::register::hvip;
-use crate::constants::csr::{hedeleg, hideleg, hcounteren};
 
-pub unsafe fn initialize_hypervisor() {
+use riscv::register::hvip;
+use alloc::collections::BTreeMap;
+use spin::{ Once, Mutex };
+use crate::constants::csr::{hedeleg, hideleg, hcounteren};
+use crate::guest::{ page_table::GuestPageTable, Guest };
+use crate::page_table::{ PageTable, PageTableSv39 };
+use crate::mm::MemorySet;
+
+use self::fdt::MachineMeta;
+
+
+pub static mut HOST_VMM: Once<Mutex<HostVmm<PageTableSv39>>> = Once::new();
+
+pub struct HostVmm<P: PageTable + GuestPageTable> {
+    pub host_machine: MachineMeta,
+    /// hypervisor memory
+    pub hpm: MemorySet<P>,
+    /// all guest structs
+    pub guests: BTreeMap<usize, Guest<P>>,
+    // current run guest id(single core)
+    pub guest_id: usize
+}
+
+pub fn add_guest(guest: Guest<PageTableSv39>) {
+    let host_vmm = unsafe{ HOST_VMM.get_mut().unwrap() };
+    let mut host_vmm = host_vmm.lock();
+    let old = host_vmm.guests.insert(guest.guest_id, guest);
+    core::mem::forget(old);
+    drop(host_vmm);
+}
+
+pub unsafe fn init_vmm(hpm: MemorySet<PageTableSv39>, host_machine: MachineMeta) {
     // hedeleg: delegate some synchronous exceptions
     hedeleg::write(
         hedeleg::INST_ADDR_MISALIGN |
@@ -164,6 +194,16 @@ pub unsafe fn initialize_hypervisor() {
     hvip::clear_vstip();
 
     hcounteren::write(0xffff_ffff);
+
+    // initialize HOST_VMM
+    HOST_VMM.call_once(|| Mutex::new(
+        HostVmm { 
+            host_machine,
+            hpm,
+            guests: BTreeMap::new(),
+            guest_id: 0
+        }
+    ));
 
     hdebug!("Initialize hypervisor environment");
 

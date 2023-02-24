@@ -9,8 +9,7 @@ use crate::constants::{
     PAGE_SIZE,
     layout::{ TRAMPOLINE, TRAP_CONTEXT, MEMORY_END, GUEST_START_PA, GUEST_START_VA }
 };
-use crate::shared::SHARED_DATA;
-use crate::hypervisor::fdt::MachineMeta;
+use crate::hypervisor::{ fdt::MachineMeta, HOST_VMM };
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use core::arch::asm;
@@ -343,19 +342,19 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             );
         }
 
-        if let Some(plic) = &machine.plic {
-            gpm.push(
-                MapArea::new(
-                    plic.base_address.into(),
-                    (plic.base_address + plic.size).into(),
-                    Some(plic.base_address.into()),
-                    Some((plic.base_address + plic.size).into()),
-                    MapType::Linear,
-                    MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
-            );
-        }
+        // if let Some(plic) = &machine.plic {
+        //     gpm.push(
+        //         MapArea::new(
+        //             plic.base_address.into(),
+        //             (plic.base_address + plic.size).into(),
+        //             Some(plic.base_address.into()),
+        //             Some((plic.base_address + plic.size).into()),
+        //             MapType::Linear,
+        //             MapPermission::R | MapPermission::W | MapPermission::U,
+        //         ), 
+        //         None
+        //     );
+        // }
 
         gpm
     }
@@ -545,8 +544,8 @@ bitflags! {
 
 #[allow(unused)]
 pub fn remap_test() {
-    let sharded_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
-    let kernel_space = &sharded_data.hpm;
+    let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+    let kernel_space = &host_vmm.hpm;
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();
     let mid_data: VirtAddr = ((sdata as usize + edata as usize) / 2).into();
@@ -569,7 +568,7 @@ pub fn remap_test() {
     unsafe{ core::ptr::read(TRAMPOLINE as *const usize) };
     // 测试 guest ketnel
     hdebug!("remap test passed!");
-    drop(sharded_data);
+    drop(host_vmm);
 }
 
 // #[allow(unused)]

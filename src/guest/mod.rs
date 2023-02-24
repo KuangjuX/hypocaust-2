@@ -1,8 +1,7 @@
 use crate::constants::layout::{TRAP_CONTEXT, GUEST_START_VA};
 use crate::mm::MemorySet;
 use crate::page_table::PageTable;
-use crate::hypervisor::stack::hstack_alloc;
-use crate::shared::SHARED_DATA;
+use crate::hypervisor::{ stack::hstack_alloc};
 use crate::trap::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
@@ -20,8 +19,6 @@ impl<P: PageTable + GuestPageTable> Guest<P> {
         // 分配 hypervisor 内核栈
         let hstack = hstack_alloc(guest_id);
         let hstack_top = hstack.get_top();
-        let shared_data = unsafe{ SHARED_DATA.get().unwrap().lock() };
-        drop(shared_data);
         // 获取 trap context
         let trap_ctx: &mut TrapContext = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
         // 初始化 trap context 的环境
