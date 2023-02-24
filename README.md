@@ -54,7 +54,7 @@ make qemu
 ## Configuration
 ### Device Tree
 
-Three types of device tree(DT):
+Two types of device tree(DT):
 1. **Host DT:** 
 - Device tree which describes underlying host HW wo hypocaust-2
 - Used by hypocaust-2 at boot-time
