@@ -39,6 +39,30 @@ make qemu
 - [ ] multicore supported
 - [ ] multiguest supported
 
+## Features
+### Doamin Isolation
+- [ ] VCPU and Host Interrupt Affinity
+- [ ] Spatial and Temporal Memory Isolation
+
+### Device Virtualization
+- [ ] Pass-through device support(enable IOMMU)
+- [ ] Block device virtualization
+- [ ] Network device virtualization
+- [ ] Input device virtualization
+- [ ] Display device virtualization
+
+## Configuration
+### Device Tree
+
+Three types of device tree(DT):
+1. **Host DT:** 
+- Device tree which describes underlying host HW wo hypocaust-2
+- Used by hypocaust-2 at boot-time
+
+2. **Guest DT:**
+- Device tree which dscribes Guest virtual HW to hypocaust-2
+- Used by hypocaust-2 to create Guest
+
 ## Tips
 - When the hypervisor is initialized, it is necessary to write the `hcounteren` register to all 1, because it is possible to read the `time` register in VU mode or VS mode.   
 
