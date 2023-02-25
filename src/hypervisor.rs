@@ -3,6 +3,7 @@ pub mod stack {
         PAGE_SIZE, KERNEL_STACK_SIZE,
         layout::TRAP_CONTEXT
     }, mm::MapPermission};
+    use crate::mm::MemorySet;
     use super::HOST_VMM;
     pub struct HypervisorStack(pub usize);
 
@@ -139,25 +140,25 @@ impl MachineMeta {
 }
 
 
-use riscv::register::hvip;
+use riscv::register::{ hvip, sie };
 use alloc::collections::BTreeMap;
 use spin::{ Once, Mutex };
 use crate::constants::csr::{hedeleg, hideleg, hcounteren};
 use crate::guest::{ page_table::GuestPageTable, Guest };
 use crate::page_table::{ PageTable, PageTableSv39 };
-use crate::mm::MemorySet;
+use crate::mm::HostMemorySet;
 
 use self::fdt::MachineMeta;
 
 
-pub static mut HOST_VMM: Once<Mutex<HostVmm<PageTableSv39>>> = Once::new();
+pub static mut HOST_VMM: Once<Mutex<HostVmm<PageTableSv39, PageTableSv39>>> = Once::new();
 
-pub struct HostVmm<P: PageTable + GuestPageTable> {
+pub struct HostVmm<P: PageTable, G: GuestPageTable> {
     pub host_machine: MachineMeta,
     /// hypervisor memory
-    pub hpm: MemorySet<P>,
+    pub hpm: HostMemorySet<P>,
     /// all guest structs
-    pub guests: BTreeMap<usize, Guest<P>>,
+    pub guests: BTreeMap<usize, Guest<G>>,
     // current run guest id(single core)
     pub guest_id: usize
 }
@@ -170,7 +171,18 @@ pub fn add_guest(guest: Guest<PageTableSv39>) {
     drop(host_vmm);
 }
 
-pub unsafe fn init_vmm(hpm: MemorySet<PageTableSv39>, host_machine: MachineMeta) {
+pub fn is_plic_access(addr: usize) -> bool {
+    let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+    let plic = if let Some(plic) = &host_vmm.host_machine.plic {
+        plic
+    }else{
+        return false
+    };
+    if addr >= plic.base_address && addr <= plic.base_address + plic.size { return true }
+    else{ return false }
+}
+
+pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineMeta) {
     // hedeleg: delegate some synchronous exceptions
     hedeleg::write(
         hedeleg::INST_ADDR_MISALIGN |
@@ -194,6 +206,11 @@ pub unsafe fn init_vmm(hpm: MemorySet<PageTableSv39>, host_machine: MachineMeta)
     hvip::clear_vstip();
 
     hcounteren::write(0xffff_ffff);
+
+    // enable all interupts
+    sie::set_sext();
+    sie::set_ssoft();
+    sie::clear_stimer();
 
     // initialize HOST_VMM
     HOST_VMM.call_once(|| Mutex::new(

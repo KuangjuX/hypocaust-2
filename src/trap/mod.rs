@@ -1,13 +1,13 @@
 use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
-use crate::guest::pmap::two_stage_translation;
+use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
 use crate::sbi::leagcy::SBI_SET_TIMER;
-use crate::hypervisor::HOST_VMM;
+use crate::hypervisor::{HOST_VMM, is_plic_access};
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst };
 use riscv::register::scause::{ Trap, Exception };
 
 mod context;
@@ -63,9 +63,48 @@ fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
 }
 
 
-pub fn guest_page_fault_handler(_ctx: &mut TrapContext) {
+pub fn guest_page_fault_handler(ctx: &mut TrapContext) -> VmmResult {
     let addr = htval::read() << 2;
-    panic!("addr: {:#x}", addr);
+    if is_plic_access(addr) {
+        // panic!("PLIC Access!");
+        let inst = htinst::read();
+        if inst == 0 {
+            // If htinst does not provide information about the trap,
+            // we must read the instruction from guest's memory manually
+            let inst_addr = ctx.sepc;
+            let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+            let gpm = &host_vmm.guests.get(&host_vmm.guest_id).unwrap().gpm;
+            if let Some(host_inst_addr) = two_stage_translation(
+                host_vmm.guest_id, 
+                inst_addr, 
+                vsatp::read().bits(), 
+                gpm
+            ) {
+                let (len, inst) = decode_inst_at_addr(host_inst_addr);
+                if let Some(_inst) = inst {
+                    ctx.sepc += len;
+                    // todo!()
+                }else{
+                    return Err(VmmError::DecodeInstError)
+                }
+            }else{
+                return Err(VmmError::TranslationError)
+            }
+        }else if inst == 0x3020 || inst == 0x3000 {
+            // TODO: we should reinject this in the guest as a fault access
+            herror!("fault on 1st stage page table walk");
+            return Err(VmmError::PseudoInst)
+        }else{
+            // If htinst is valid and is not a pseudo instructon make sure
+            // the opcode is valid even if it was a compressed instruction,
+            // but before save the real instruction size.
+            todo!()
+        }
+        // return Ok(())
+        todo!()
+    }else{
+        Err(VmmError::DeviceNotFound)
+    }
 }
 
 
@@ -106,7 +145,19 @@ pub unsafe fn trap_handler() -> ! {
                 ctx.sepc, hgatp::read().bits()
             );
     },
-    Trap::Exception(Exception::LoadGuestPageFault) | Trap::Exception(Exception::StoreGuestPageFault) => guest_page_fault_handler(ctx),
+    Trap::Exception(Exception::LoadGuestPageFault) | Trap::Exception(Exception::StoreGuestPageFault) => {
+        match guest_page_fault_handler(ctx) {
+            Ok(()) => {}
+            Err(VmmError::DeviceNotFound) => {
+                herror!("Device not found!");
+                todo!()
+            },
+            Err(VmmError::DecodeInstError) => {
+                herror!("Decode failed at addr {:#x}", ctx.sepc);
+            }
+            _ => unimplemented!()
+        }
+    },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
     switch_to_guest()

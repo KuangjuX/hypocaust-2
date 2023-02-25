@@ -2,7 +2,7 @@
 
 use crate::guest::page_table::GuestPageTable;
 use crate::hyp_alloc::{ FrameTracker, frame_alloc };
-use crate::page_table::{PTEFlags, PageTable, PageTableEntry};
+use crate::page_table::{PTEFlags, PageTable};
 use crate::page_table::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
 use crate::page_table::{StepByOne, VPNRange, PPNRange};
 use crate::constants::{
@@ -12,7 +12,7 @@ use crate::constants::{
 use crate::hypervisor::{ fdt::MachineMeta, HOST_VMM };
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use core::arch::asm;
+use super::MemorySet;
 use core::marker::PhantomData;
 
 extern "C" {
@@ -31,69 +31,31 @@ extern "C" {
 }
 
 
+
+
 /// memory set structure, controls virtual-memory space
-pub struct MemorySet<P: PageTable + GuestPageTable> {
-    page_table: P,
-    areas: Vec<MapArea<P>>,
+pub struct HostMemorySet<P: PageTable> {
+    pub page_table: P,
+    pub areas: Vec<MapArea<P>>,
 }
 
-impl<P: PageTable + GuestPageTable> MemorySet<P> {
+pub struct GuestMemorySet<G: GuestPageTable> {
+    pub page_table: G,
+    pub areas: Vec<MapArea<G>>,
+}
+
+impl<P: PageTable> HostMemorySet<P> {
     pub fn new_bare() -> Self {
         Self {
             page_table: PageTable::new(),
             areas: Vec::new(),
         }
     }
-    /// 为 guest page table 新建根页表
-    /// 需要分配 16 KiB 对齐的页表
-    pub fn new_guest_bare() -> Self {
-        Self {
-            page_table: GuestPageTable::new_guest(),
-            areas: Vec::new()
-        }
-    }
-
-    pub fn token(&self) -> usize {
-        self.page_table.token()
-    }
-
-    pub fn page_table(&self) -> &P {
-        &self.page_table
-    }
-    /// Assume that no conflicts.
-    pub fn insert_framed_area(
-        &mut self,
-        start_va: VirtAddr,
-        end_va: VirtAddr,
-        permission: MapPermission,
-    ) {
-        self.push(
-            MapArea::new(start_va, end_va,  None, None, MapType::Framed, permission),
-            None,
-        );
-    }
-
-    /// 将内存区域 push 到页表中，并映射内存区域
-    fn push(&mut self, mut map_area: MapArea<P>, data: Option<&[u8]>) {
-        map_area.map(&mut self.page_table);
-        if let Some(data) = data {
-            map_area.copy_data(&mut self.page_table, data);
-        }
-        self.areas.push(map_area);
-    }
-    /// Mention that trampoline is not collected by areas.
-    fn map_trampoline(&mut self) {
-        self.page_table.map(
-            VirtAddr::from(TRAMPOLINE).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PTEFlags::R | PTEFlags::X,
-        );
-    }
 
     /// Without kernel stacks.
     /// 内核虚拟地址映射
     /// 映射了内核代码段和数据段以及跳板页，没有映射内核栈
-    pub fn new_kernel(machine: &MachineMeta) -> Self {
+    pub fn new_host_vmm(machine: &MachineMeta) -> Self {
         let mut hpm = Self::new_bare();
         // map trampoline
         hpm.map_trampoline();
@@ -215,6 +177,40 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             ), 
             None
         );
+    }
+
+    /// 加载客户操作系统
+    pub fn map_gpm(&mut self, gpm: &GuestMemorySet<impl GuestPageTable>) {
+        for area in gpm.areas.iter() {
+            // 修改虚拟地址与物理地址相同
+            let ppn_range = area.ppn_range.unwrap();
+            let start_pa: PhysAddr = ppn_range.get_start().into();
+            let end_pa: PhysAddr = ppn_range.get_end().into();
+            let start_va: usize = start_pa.into();
+            let end_va: usize= end_pa.into();
+            let new_area = MapArea::new(
+                start_va.into(), 
+                end_va.into(), 
+                Some(start_pa),
+                Some(end_pa), 
+                area.map_type, 
+                area.map_perm
+            );
+            self.push(new_area, None);
+        }
+    }
+
+
+}
+
+impl<G: GuestPageTable> GuestMemorySet<G> {
+    /// 为 guest page table 新建根页表
+    /// 需要分配 16 KiB 对齐的页表
+    pub fn new_guest_bare() -> Self {
+        Self {
+            page_table: GuestPageTable::new_guest(),
+            areas: Vec::new()
+        }
     }
 
     pub fn new_guest(guest_data: &[u8], gpm_size: usize, machine: &MachineMeta) -> Self {
@@ -342,65 +338,21 @@ impl<P: PageTable + GuestPageTable> MemorySet<P> {
             );
         }
 
-        // if let Some(plic) = &machine.plic {
-        //     gpm.push(
-        //         MapArea::new(
-        //             plic.base_address.into(),
-        //             (plic.base_address + plic.size).into(),
-        //             Some(plic.base_address.into()),
-        //             Some((plic.base_address + plic.size).into()),
-        //             MapType::Linear,
-        //             MapPermission::R | MapPermission::W | MapPermission::U,
-        //         ), 
-        //         None
-        //     );
-        // }
+        if let Some(plic) = &machine.plic {
+            gpm.push(
+                MapArea::new(
+                    plic.base_address.into(),
+                    (plic.base_address + plic.size).into(),
+                    Some(plic.base_address.into()),
+                    Some((plic.base_address + plic.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
 
         gpm
-    }
-
-
-    /// 加载客户操作系统
-    pub fn map_gpm(&mut self, guest_kernel_memory: &Self) {
-        for area in guest_kernel_memory.areas.iter() {
-            // 修改虚拟地址与物理地址相同
-            let ppn_range = area.ppn_range.unwrap();
-            let start_pa: PhysAddr = ppn_range.get_start().into();
-            let end_pa: PhysAddr = ppn_range.get_end().into();
-            let start_va: usize = start_pa.into();
-            let end_va: usize= end_pa.into();
-            let new_area = MapArea::new(
-                start_va.into(), 
-                end_va.into(), 
-                Some(start_pa),
-                Some(end_pa), 
-                area.map_type, 
-                area.map_perm
-            );
-            self.push(new_area, None);
-        }
-    }
-
-
-    /// 激活根页表
-    pub fn activate(&self) {
-        let satp = self.page_table.token();
-        unsafe {
-            asm!(
-                "csrw satp, {hgatp}",
-                "sfence.vma",
-                hgatp = in(reg) satp
-            );
-        }
-    }
-    
-    /// 将虚拟页号翻译成页表项
-    pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
-        self.page_table.translate(vpn)
-    }
-
-    pub fn translate_va(&self, va: usize) -> Option<usize> {
-        self.page_table.translate_va(va)
     }
 }
 

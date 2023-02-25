@@ -3,7 +3,10 @@ pub enum VmmError {
     NotSupported,
     NoFound,
     Unimplemented,
-    TranslationError
+    TranslationError,
+    DeviceNotFound,
+    PseudoInst,
+    DecodeInstError
 }
 
 pub type VmmResult<T = ()> = Result<T, VmmError>;

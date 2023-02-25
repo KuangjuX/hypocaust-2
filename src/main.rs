@@ -34,7 +34,7 @@ mod error;
 
 use crate::constants::PAGE_SIZE;
 // use crate::hypervisor::fdt::MachineMeta;
-use crate::mm::MemorySet;
+use crate::mm::{HostMemorySet, GuestMemorySet};
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
@@ -114,11 +114,11 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // TODO: parse guest fdt
         let guest_machine = machine.clone();
-        // initialize shared data
-        let hpm = MemorySet::<PageTableSv39>::new_kernel(&machine);
+        // initialize vmm
+        let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);
         // create guest memory set
-        let gpm = MemorySet::<PageTableSv39>::new_guest(
+        let gpm = GuestMemorySet::<PageTableSv39>::new_guest(
             &GUEST, 
             GUEST_DEFAULT_SIZE,
             &guest_machine
