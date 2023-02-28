@@ -46,7 +46,7 @@ make qemu
 - [x] Timers
 - [x] Passthrough virtio block device
 - [x] Configure hypervisor and guest memory addresses and peripheral space mapping by device tree.
-- [ ] Emulate PLIC && Forward interrupts
+- [x] Emulate PLIC && Forward interrupts
 - [ ] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
 - [ ] run rCore-Tutorial-v3/xv6-riscv
