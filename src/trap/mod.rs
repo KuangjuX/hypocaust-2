@@ -1,14 +1,17 @@
 use core::arch::{ global_asm, asm };
 
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
+use crate::device_emu::plic::is_plic_access;
+use crate::guest::page_table::GuestPageTable;
 use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
+use crate::page_table::PageTable;
 use crate::sbi::leagcy::SBI_SET_TIMER;
-use crate::hypervisor::{HOST_VMM, is_plic_access};
+use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst };
-use riscv::register::scause::{ Trap, Exception };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, vstvec, vsepc };
+use riscv::register::scause::{ Trap, Exception, Interrupt };
 
 mod context;
 pub use context::TrapContext;
@@ -63,17 +66,15 @@ fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
 }
 
 
-pub fn guest_page_fault_handler(ctx: &mut TrapContext) -> VmmResult {
+pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>, ctx: &mut TrapContext) -> VmmResult {
     let addr = htval::read() << 2;
     if is_plic_access(addr) {
-        // panic!("PLIC Access!");
         let inst = htinst::read();
         if inst == 0 {
             // If htinst does not provide information about the trap,
             // we must read the instruction from guest's memory manually
             let inst_addr = ctx.sepc;
-            let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
-            let gpm = &host_vmm.guests.get(&host_vmm.guest_id).unwrap().gpm;
+            let gpm = &host_vmm.guests[host_vmm.guest_id].as_ref().unwrap().gpm;
             if let Some(host_inst_addr) = two_stage_translation(
                 host_vmm.guest_id, 
                 inst_addr, 
@@ -81,9 +82,9 @@ pub fn guest_page_fault_handler(ctx: &mut TrapContext) -> VmmResult {
                 gpm
             ) {
                 let (len, inst) = decode_inst_at_addr(host_inst_addr);
-                if let Some(_inst) = inst {
-                    ctx.sepc += len;
-                    // todo!()
+                if let Some(inst) = inst {
+                    host_vmm.handle_plic_access(ctx, stval::read(), inst)?;
+                    ctx.sepc += len;         
                 }else{
                     return Err(VmmError::DecodeInstError)
                 }
@@ -100,11 +101,42 @@ pub fn guest_page_fault_handler(ctx: &mut TrapContext) -> VmmResult {
             // but before save the real instruction size.
             todo!()
         }
-        // return Ok(())
-        todo!()
+        Ok(())
     }else{
         Err(VmmError::DeviceNotFound)
     }
+}
+
+/// forward interrupt to guest
+pub fn maybe_forward_interrupt<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>, ctx: &mut TrapContext) {
+    // todo: check if guest enable interrupt
+    
+    // check external interrupt && handle
+    let host_plic = host_vmm.host_plic.as_mut().unwrap();
+    // get current guest context id
+    let context_id = 2 * host_vmm.guest_id + 1;
+    let claim_and_complete_addr = host_plic.base_addr + 0x0020_0004 + 0x1000 * context_id;
+    let irq = unsafe{
+        core::ptr::read(claim_and_complete_addr as *const u32)
+    };
+    htracking!("external interrupt irq: {}", irq);
+    host_plic.claim_complete[context_id] = irq; 
+    // set vstvec to sepc
+    unsafe{
+        asm!(
+            "csrw vsepc, {sepc}",
+            "csrw vscause, {scause}",
+            sepc = in(reg) ctx.sepc,
+            scause = in(reg) scause::read().bits()
+        );
+    }
+    ctx.sepc = vstvec::read().bits();
+    // set sepc to vstvec
+    htracking!("forward interrupt: vstvec: {:#x}, sepc: {:#x} ,vsepc: {:#x}", vstvec::read().bits(), ctx.sepc, vsepc::read());
+}
+
+pub fn handle_internal_vmm_error(_err: VmmError) {
+    todo!()
 }
 
 
@@ -112,19 +144,22 @@ pub fn guest_page_fault_handler(ctx: &mut TrapContext) -> VmmResult {
 pub unsafe fn trap_handler() -> ! {
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
     let scause = scause::read();
+    let host_vmm = HOST_VMM.get_mut().unwrap();
+    let mut host_vmm = host_vmm.lock();
+    let mut err = None;
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             panic!("U-mode/VU-mode env call from VS-mode?");
         },
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
-            if let Err(err) = sbi_handler(ctx) {
-                panic!("err: {:?}", err);
+            if let Err(vmm_err) = sbi_handler(ctx) {
+                err = Some(vmm_err);
             }
             ctx.sepc += 4;
         },
         Trap::Exception(Exception::VirtualInstruction) => {
-            if let Err(err) = privileged_inst_handler(ctx) {
-                panic!("err: {:?}", err);
+            if let Err(vmm_err) = privileged_inst_handler(ctx) {
+                err  = Some(vmm_err);
             }
         },
         Trap::Exception(Exception::IllegalInstruction) => {
@@ -134,7 +169,7 @@ pub unsafe fn trap_handler() -> ! {
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
             let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
             let guest_id = host_vmm.guest_id;
-            let gpm = &host_vmm.guests.get(&guest_id).unwrap().gpm;
+            let gpm = &host_vmm.guests[guest_id].as_ref().unwrap().gpm;
             if let Some(host_va) = two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm) {
                 herror!("host va: {:#x}", host_va);
             }else{
@@ -146,19 +181,19 @@ pub unsafe fn trap_handler() -> ! {
             );
     },
     Trap::Exception(Exception::LoadGuestPageFault) | Trap::Exception(Exception::StoreGuestPageFault) => {
-        match guest_page_fault_handler(ctx) {
-            Ok(()) => {}
-            Err(VmmError::DeviceNotFound) => {
-                herror!("Device not found!");
-                todo!()
-            },
-            Err(VmmError::DecodeInstError) => {
-                herror!("Decode failed at addr {:#x}", ctx.sepc);
-            }
-            _ => unimplemented!()
+        if let Err(vmm_err) = guest_page_fault_handler(&mut host_vmm, ctx) {
+            err = Some(vmm_err);
         }
     },
+    Trap::Interrupt(Interrupt::SupervisorExternal) => {
+        maybe_forward_interrupt(&mut host_vmm, ctx);
+    },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
+    }
+    drop(host_vmm);
+    if let Some(err) = err {
+        // TODO: handler vmm error
+        handle_internal_vmm_error(err)
     }
     switch_to_guest()
 }

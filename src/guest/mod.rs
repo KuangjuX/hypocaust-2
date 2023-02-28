@@ -1,20 +1,28 @@
 use crate::constants::layout::{TRAP_CONTEXT, GUEST_START_VA};
+use crate::hypervisor::fdt::MachineMeta;
 use crate::mm::{ GuestMemorySet, MemorySet };
 use crate::hypervisor::{ stack::hstack_alloc};
 use crate::trap::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
+use self::vcpu::VCpu;
 
 mod context;
+mod vcpu;
 
 
 pub struct Guest<G: GuestPageTable> {
+    pub guest_machine: MachineMeta,
+    /// guest memory set
     pub gpm: GuestMemorySet<G>,
-    pub guest_id: usize
+    /// guest id
+    pub guest_id: usize,
+    /// virtual cpu status
+    pub vcpu: VCpu
 }
 
 impl<G: GuestPageTable> Guest<G> {
-    pub fn new(guest_id: usize, gpm: GuestMemorySet<G>) -> Self {
+    pub fn new(guest_id: usize, gpm: GuestMemorySet<G>, guest_machine: MachineMeta) -> Self {
         // 分配 hypervisor 内核栈
         let hstack = hstack_alloc(guest_id);
         let hstack_top = hstack.get_top();
@@ -31,7 +39,9 @@ impl<G: GuestPageTable> Guest<G> {
         );
         Self {
             guest_id,
-            gpm
+            gpm,
+            guest_machine,
+            vcpu: VCpu::new(guest_id),
         }
     }
 
@@ -72,7 +82,6 @@ pub mod pmap {
 
     pub fn two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize, gpm: &GuestMemorySet<G>) -> Option<usize> {
         let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
-        htracking!("guest root: {:#x}, vsatp: {:#x}", guest_root, vsatp);
         if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
             let guest_pa = translation.guest_pa;
             if let Some(host_va) = gpm.translate_va(guest_pa) {

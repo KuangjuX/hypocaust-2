@@ -2,7 +2,6 @@ mod memory_set;
 
 pub use memory_set::{HostMemorySet, GuestMemorySet, MapArea, remap_test, MapPermission};
 
-use core::arch::asm;
 use memory_set::MapType;
 use crate::guest::page_table::GuestPageTable;
 use crate::page_table::{VirtAddr, PageTable, VirtPageNum, PageTableEntry, PhysAddr, PTEFlags};
@@ -31,7 +30,6 @@ pub trait MemorySet<P: PageTable>{
     );
 
     fn map_trampoline(&mut self);
-    fn activate(&self);
     fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry>;
     fn translate_va(&self, va: usize) -> Option<usize>;
 }
@@ -75,17 +73,6 @@ impl<P: PageTable> MemorySet<P> for HostMemorySet<P> {
         );
     }
 
-    /// 激活根页表
-    fn activate(&self) {
-        let satp = self.page_table.token();
-        unsafe {
-            asm!(
-                "csrw satp, {hgatp}",
-                "sfence.vma",
-                hgatp = in(reg) satp
-            );
-        }
-    }
     
     /// 将虚拟页号翻译成页表项
     fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
@@ -134,18 +121,6 @@ impl<P: GuestPageTable> MemorySet<P> for GuestMemorySet<P> {
             PhysAddr::from(strampoline as usize).into(),
             PTEFlags::R | PTEFlags::X,
         );
-    }
-
-    /// 激活根页表
-    fn activate(&self) {
-        let satp = self.page_table.token();
-        unsafe {
-            asm!(
-                "csrw satp, {hgatp}",
-                "sfence.vma",
-                hgatp = in(reg) satp
-            );
-        }
     }
     
     /// 将虚拟页号翻译成页表项

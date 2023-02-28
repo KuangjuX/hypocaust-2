@@ -14,6 +14,7 @@ use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use super::MemorySet;
 use core::marker::PhantomData;
+use core::arch::asm;
 
 extern "C" {
     fn stext();
@@ -162,7 +163,33 @@ impl<P: PageTable> HostMemorySet<P> {
                 None,
             )
         }
+
+        if let Some(plic) = &machine.plic {
+            hpm.push(
+                MapArea::new(
+                    plic.base_address.into(),
+                    (plic.base_address + plic.size).into(),
+                    Some(plic.base_address.into()),
+                    Some((plic.base_address + plic.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W,
+                ), 
+                None
+            );
+        }
         hpm
+    }
+
+    /// 激活根页表
+    pub fn activate(&self) {
+        let satp = self.page_table.token();
+        unsafe {
+            asm!(
+                "csrw satp, {hgatp}",
+                "sfence.vma",
+                hgatp = in(reg) satp
+            );
+        }
     }
 
     pub fn map_guest(&mut self, start_pa: usize, gpm_size: usize) {
@@ -342,9 +369,9 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             gpm.push(
                 MapArea::new(
                     plic.base_address.into(),
-                    (plic.base_address + plic.size).into(),
+                    (plic.base_address + 0x0020_0000).into(),
                     Some(plic.base_address.into()),
-                    Some((plic.base_address + plic.size).into()),
+                    Some((plic.base_address + 0x0020_0000).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
                 ), 

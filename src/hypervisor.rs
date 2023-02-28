@@ -140,10 +140,12 @@ impl MachineMeta {
 }
 
 
+use arrayvec::ArrayVec;
 use riscv::register::{ hvip, sie };
-use alloc::collections::BTreeMap;
 use spin::{ Once, Mutex };
+use crate::constants::MAX_GUESTS;
 use crate::constants::csr::{hedeleg, hideleg, hcounteren};
+use crate::device_emu::plic::PlicState;
 use crate::guest::{ page_table::GuestPageTable, Guest };
 use crate::page_table::{ PageTable, PageTableSv39 };
 use crate::mm::HostMemorySet;
@@ -158,29 +160,21 @@ pub struct HostVmm<P: PageTable, G: GuestPageTable> {
     /// hypervisor memory
     pub hpm: HostMemorySet<P>,
     /// all guest structs
-    pub guests: BTreeMap<usize, Guest<G>>,
-    // current run guest id(single core)
-    pub guest_id: usize
+    pub guests: ArrayVec<Option<Guest<G>>, MAX_GUESTS>,
+    /// current run guest id(single core)
+    pub guest_id: usize,
+    /// hypervisor emulated plic
+    pub host_plic: Option<PlicState>
 }
 
-pub fn add_guest(guest: Guest<PageTableSv39>) {
+pub fn add_guest_queue(guest: Guest<PageTableSv39>) {
     let host_vmm = unsafe{ HOST_VMM.get_mut().unwrap() };
     let mut host_vmm = host_vmm.lock();
-    let old = host_vmm.guests.insert(guest.guest_id, guest);
-    core::mem::forget(old);
-    drop(host_vmm);
+    let guest_id = guest.guest_id;
+    assert!(guest_id < MAX_GUESTS);
+    host_vmm.guests[guest_id] = Some(guest);
 }
 
-pub fn is_plic_access(addr: usize) -> bool {
-    let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
-    let plic = if let Some(plic) = &host_vmm.host_machine.plic {
-        plic
-    }else{
-        return false
-    };
-    if addr >= plic.base_address && addr <= plic.base_address + plic.size { return true }
-    else{ return false }
-}
 
 pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineMeta) {
     // hedeleg: delegate some synchronous exceptions
@@ -213,14 +207,28 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
     sie::clear_stimer();
 
     // initialize HOST_VMM
-    HOST_VMM.call_once(|| Mutex::new(
-        HostVmm { 
-            host_machine,
-            hpm,
-            guests: BTreeMap::new(),
-            guest_id: 0
+    HOST_VMM.call_once(|| {
+        let mut guests: ArrayVec<Option<Guest<PageTableSv39>>, MAX_GUESTS> = ArrayVec::new_const();
+        for _ in 0..MAX_GUESTS{
+            guests.push(None)
         }
-    ));
+
+        let host_plic;
+        if let Some(plic) = host_machine.clone().plic {
+            host_plic = Some(PlicState::new(plic.base_address));
+        }else{
+            host_plic = None;
+        }
+        Mutex::new(
+            HostVmm { 
+                host_machine,
+                hpm,
+                guests,
+                guest_id: 0,
+                host_plic
+            }
+        )
+    });
 
     hdebug!("Initialize hypervisor environment");
 

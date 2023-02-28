@@ -120,7 +120,7 @@ impl PageTable for PageTableSv39 {
         let offset = va & 0xfff;
         let vpn = VirtPageNum::from(va >> 12);
         if let Some(pte) = self.translate(vpn) {
-            Some(pte.ppn().0 << 12 + offset)
+            Some((pte.ppn().0 << 12) + offset)
         }else{
             None
         }
@@ -133,14 +133,13 @@ impl PageTable for PageTableSv39 {
             let pte_index = (va >> (30 - 9 * level)) & 0x1ff;
             let pte_addr = page_table + pte_index * 8;
             let pte = read_pte(pte_addr);
-            htracking!("ppn: {:#x}", pte & 0x3ff_ffff_ffff);
             let level = match level {
                 0 => PageTableLevel::Level1GB,
                 1 => PageTableLevel::Level2MB,
                 2 => PageTableLevel::Level4KB,
                 _ => unreachable!(),
             };
-            let pte = PageTableEntry{ bits: pte};
+            let pte = PageTableEntry{ bits: pte };
             path.push(PteWrapper{ addr: pte_addr, pte, level});
 
             if !pte.is_valid() || (pte.writable() && !pte.readable()){ return None; }

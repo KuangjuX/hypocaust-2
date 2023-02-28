@@ -4,6 +4,13 @@ pub const USER_STACK_SIZE: usize = 4096 * 2;
 pub const KERNEL_STACK_SIZE: usize = 4096 * 4;
 pub const KERNEL_HEAP_SIZE: usize = 0x30_0000;
 
+
+pub const MAX_GUESTS: usize = 4;
+pub const MAX_GUEST_HARTS: usize = 16;
+/// Number of contexts for the PLIC. Value is twice the max number of harts because each hart will
+/// have on M-mode context and one S-mode context.
+pub const MAX_CONTEXTS: usize = 16 * 2;
+
 pub use crate::board::CLOCK_FREQ;
 
 pub mod layout {
