@@ -39,7 +39,7 @@ use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
 use crate::trap::switch_to_guest;
-use crate::hypervisor::{ init_vmm, HOST_VMM,  add_guest_queue };
+use crate::hypervisor::{ init_vmm, HOST_VMM, add_guest_queue };
 
 pub use error::{ VmmError, VmmResult };
 

@@ -77,7 +77,10 @@ readable unless the applicable bits are set in both `hcounteren` and `scounteren
 reads to the corresponding counter will cause an exception when V=1. Hence, they are effectively
 WARL fields.) 
 - When the hypervisor initializes the memory for the guest, it needs to set all the mapping flags of the guest memory to RWX, although it needs to be modified in the end. Otherwise, when the guest allocates memory for the application, it will not be executable, causing `InstructionGuestPageFault`. 
-- The hypervisor currently does not support IOMMU, so when the guest needs to access DMA, the guest needs to be modified to complete the address translation from guest va to host pa.
+- The hypervisor currently does not support IOMMU, so when the guest needs to access DMA, the guest needs to be modified to complete the address translation from guest va to host pa.  
+- The hypervisor have to check `sstatus` and `sip` register to decide if it's necessary to forward interrupt(refs: An interrupt i will trap to S-mode if both of the following are true: (a) either the current privilege
+mode is S and the SIE bit in the sstatus register is set, or the current privilege mode has less
+privilege than S-mode; and (b) bit i is set in both sip and sie.)
 
 ## Design Docs
 - [Trap Design](docs/trap.md)

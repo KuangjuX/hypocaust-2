@@ -164,7 +164,9 @@ pub struct HostVmm<P: PageTable, G: GuestPageTable> {
     /// current run guest id(single core)
     pub guest_id: usize,
     /// hypervisor emulated plic
-    pub host_plic: Option<PlicState>
+    pub host_plic: Option<PlicState>,
+
+    pub irq_pending: bool,
 }
 
 pub fn add_guest_queue(guest: Guest<PageTableSv39>) {
@@ -225,7 +227,8 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
                 hpm,
                 guests,
                 guest_id: 0,
-                host_plic
+                host_plic,
+                irq_pending: false
             }
         )
     });
