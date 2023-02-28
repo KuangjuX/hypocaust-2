@@ -343,6 +343,17 @@ pub mod csr {
             )
         }
     }
+
+
+    pub mod sip {
+        /// software interrupts pending
+        pub const SSIP: usize = 1 << 1;
+        /// timer interrupts pending
+        pub const STIP: usize = 1 << 5;
+        /// external interrupts pending
+        pub const SEIP: usize = 1 << 9;
+    }
+
 }
 
 pub mod riscv_regs {

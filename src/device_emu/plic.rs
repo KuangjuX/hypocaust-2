@@ -1,3 +1,4 @@
+use riscv::register::hvip;
 use riscv_decode::Instruction;
 
 use crate::trap::TrapContext;
@@ -55,15 +56,19 @@ impl<P: PageTable, G: GuestPageTable> HostVmm<P, G> {
                 match instrution {
                     Instruction::Lw(i) => {
                         // guest read claim from plic core
+                        // htracking!("guest read plic claim: {}, addr: {:#x}", host_plic.claim_complete[hart], guest_pa);
                         ctx.x[i.rd() as usize] = host_plic.claim_complete[hart] as usize;
                     },
                     Instruction::Sw(i) => {
                         // guest write complete to plic core
                         let value = ctx.x[i.rs2() as usize] as u32;
+                        // htracking!("guest write plic complete: {}, addr: {:#x}", value, guest_pa);
                         // todo: guest pa -> host pa
                         unsafe{
                             core::ptr::write_volatile(guest_pa as *mut u32, value);
                         }
+                        host_plic.claim_complete[hart] = 0;
+                        unsafe{ hvip::clear_vseip(); }
                     },
                     _ => return Err(VmmError::UnexpectedInst)
                 }

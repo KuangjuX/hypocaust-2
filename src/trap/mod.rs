@@ -1,5 +1,6 @@
 use core::arch::{ global_asm, asm };
 
+// use crate::constants::csr::sip::SEIP;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
@@ -10,7 +11,8 @@ use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, vstvec, vsepc, vsstatus, vsip, vsie };
+
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip };
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
 mod context;
@@ -107,32 +109,6 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
     }
 }
 
-/// forward interrupt to guest
-pub fn maybe_forward_interrupt<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>, ctx: &mut TrapContext) {
-    if !host_vmm.irq_pending{ return }   
-    // todo: check if guest enable interrupt
-    let vsstatus = vsstatus::read();
-    let vsip = vsip::read();
-    let vsie = vsie::read();
-    if (vsstatus.spp() && vsstatus.sie()) || (!vsstatus.spp() && (vsip.bits() & vsie.bits()) != 0) {
-        // An interrupt i will trap to S-mode if both of the following are true: (a) either the current privilege
-        // mode is S and the SIE bit in the sstatus register is set, or the current privilege mode has less
-        // privilege than S-mode; and (b) bit i is set in both sip and sie.
-        // set vstvec to sepc
-        unsafe{
-            asm!(
-                "csrw vsepc, {sepc}",
-                "csrw vscause, {scause}",
-                sepc = in(reg) ctx.sepc,
-                scause = in(reg) scause::read().bits()
-            );
-        }
-        ctx.sepc = vstvec::read().bits();
-        // set sepc to vstvec
-        htracking!("forward interrupt: vstvec: {:#x}, sepc: {:#x} ,vsepc: {:#x}", vstvec::read().bits(), ctx.sepc, vsepc::read());
-
-    } 
-}
 
 
 /// handle interrupt request(current only external interrupt)
@@ -146,9 +122,10 @@ pub fn handle_irq<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>,
     let irq = unsafe{
         core::ptr::read(claim_and_complete_addr as *const u32)
     };
-    htracking!("external interrupt irq: {}", irq);
     host_plic.claim_complete[context_id] = irq; 
 
+    unsafe{ hvip::set_vseip() };
+    
     // set irq pending in host vmm
     host_vmm.irq_pending = true;
 } 
@@ -205,7 +182,6 @@ pub unsafe fn trap_handler() -> ! {
     },
     Trap::Interrupt(Interrupt::SupervisorExternal) => {
         handle_irq(&mut host_vmm, ctx);
-        maybe_forward_interrupt(&mut host_vmm, ctx);
     },
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }

@@ -20,6 +20,21 @@ git submodule update --init
 make qemu
 ```
 
+## Examples 
+### minikernel
+```
+cp guest/minikernel/minikernel ./guest.bin
+cp guest/minikernel/fs ./fs.img
+make qemu
+```
+
+### rCore-Tutorial-v3
+```
+cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.bin
+cp guest/rCore-Tutorial-v3/fs ./fs.img
+make qemu
+```
+
 ## RoadMap
 - [x] Load guest elf image.
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
@@ -65,9 +80,7 @@ Two types of device tree(DT):
 - Used by hypocaust-2 to create Guest
 
 ## Tips
-- When the hypervisor is initialized, it is necessary to write the `hcounteren` register to all 1, because it is possible to read the `time` register in VU mode or VS mode.   
-
-(refs: The counter-enable register `hcounteren` is a 32-bit register that controls the availability of the hardware performance monitoring counters to the guest virtual machine.  
+- When the hypervisor is initialized, it is necessary to write the `hcounteren` register to all 1, because it is possible to read the `time` register in VU mode or VS mode.(refs: The counter-enable register `hcounteren` is a 32-bit register that controls the availability of the hardware performance monitoring counters to the guest virtual machine.  
 When the CY, TM, IR, or HPMn bit in the hcounteren register is clear, attempts to read the
 cycle, time, instret, or hpmcountern register while V=1 will cause a virtual instruction exception
 if the same bit in mcounteren is 1. When one of these bits is set, access to the corresponding register
@@ -78,7 +91,7 @@ reads to the corresponding counter will cause an exception when V=1. Hence, they
 WARL fields.) 
 - When the hypervisor initializes the memory for the guest, it needs to set all the mapping flags of the guest memory to RWX, although it needs to be modified in the end. Otherwise, when the guest allocates memory for the application, it will not be executable, causing `InstructionGuestPageFault`. 
 - The hypervisor currently does not support IOMMU, so when the guest needs to access DMA, the guest needs to be modified to complete the address translation from guest va to host pa.  
-- The hypervisor have to check `sstatus` and `sip` register to decide if it's necessary to forward interrupt(refs: An interrupt i will trap to S-mode if both of the following are true: (a) either the current privilege
+- The hypervisor have to check `sstatus` and `sip` register to decide if it's necessary to forward interrupt.(refs: An interrupt i will trap to S-mode if both of the following are true: (a) either the current privilege
 mode is S and the SIE bit in the sstatus register is set, or the current privilege mode has less
 privilege than S-mode; and (b) bit i is set in both sip and sie.)
 

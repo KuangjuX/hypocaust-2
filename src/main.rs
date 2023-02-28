@@ -91,9 +91,6 @@ fn clear_bss() {
 }
 
 
-
-
-
 #[no_mangle]
 unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {

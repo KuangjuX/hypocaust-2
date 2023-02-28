@@ -206,7 +206,9 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
     // enable all interupts
     sie::set_sext();
     sie::set_ssoft();
-    sie::clear_stimer();
+    sie::set_stimer();
+
+    
 
     // initialize HOST_VMM
     HOST_VMM.call_once(|| {
