@@ -7,7 +7,7 @@ My plan is to build a high-performance riscv64 hypervisor that physically maps t
   
 The purpose of this project is to run on bare metal or embedded devices, but it is not ruled out that kvm technology will be used and run on linux in the future.  
   
-[![run rCore-Tutorial-v3](http://img.youtube.com/vi/YCzfB2i8ydw/0.jpg)](https://www.youtube.com/watch?v=YCzfB2i8ydw "run rCore-Tutorial-v3")
+[![asciicast](https://asciinema.org/a/132560.png)](https://asciinema.org/a/132560)
 
 ## Environment
 - QEMU 7.2.0
