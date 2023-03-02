@@ -178,11 +178,6 @@ pub unsafe fn trap_handler() -> ! {
                 err  = Some(vmm_err);
             }
         },
-        Trap::Exception(Exception::IllegalInstruction) => {
-            // Invalid instruction, read/write csr
-            // forward exception
-            forward_exception(ctx);
-        },
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
             let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
             let guest_id = host_vmm.guest_id;
@@ -210,8 +205,8 @@ pub unsafe fn trap_handler() -> ! {
         hvip::set_vstip();
         // disable timer interrupt
         sie::clear_stimer();
-    }
-        _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
+    },
+    _ => forward_exception(ctx),
     }
     drop(host_vmm);
     if let Some(err) = err {
