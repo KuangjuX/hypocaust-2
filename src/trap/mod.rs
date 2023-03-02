@@ -12,7 +12,7 @@ use crate::{ VmmError, VmmResult };
 use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
 
-use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip };
+use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip, vstvec };
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
 mod context;
@@ -140,7 +140,15 @@ pub fn handle_irq<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>,
 } 
 
 pub fn forward_exception(ctx: &mut TrapContext) {
-    
+    unsafe{
+        asm!(
+            "csrw vsepc, {sepc}",
+            "csrw vscause, {scause}",
+            sepc = in(reg) ctx.sepc,
+            scause = in(reg) scause::read().bits()
+        )
+    }
+    ctx.sepc = vstvec::read().bits();
 }
 
 pub fn handle_internal_vmm_error(_err: VmmError) {
@@ -173,7 +181,7 @@ pub unsafe fn trap_handler() -> ! {
         Trap::Exception(Exception::IllegalInstruction) => {
             // Invalid instruction, read/write csr
             // forward exception
-            panic!("read/write CSR");
+            forward_exception(ctx);
         },
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
             let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
