@@ -36,18 +36,6 @@ QEMUOPTS 	+=-device virtio-net-device,netdev=net0
 QEMUOPTS	+=-netdev user,id=net0,hostfwd=udp::6200-:2000
 
 
-# $(GUEST):
-# 	cd guest && cargo build && cp target/$(TARGET)/$(MODE)/guest ../guest.bin
-
-$(FS_IMG): 
-	cd minikernel && make fs-img 
-	cp minikernel/user/target/$(TARGET)/release/fs.img ./
-
-$(GUEST): $(FS_IMG)
-	cd minikernel/user && cargo build --release
-	cd minikernel && cargo build && cp target/$(TARGET)/$(MODE)/minikernel ../guest.bin
-
-
 build: $(GUEST)
 	cp src/linker-qemu.ld src/linker.ld
 	cargo build $(GUEST_KERNEL_FEATURE)
@@ -58,7 +46,7 @@ $(KERNEL_BIN): build
 
 	
 
-qemu: $(KERNEL_BIN)
+qemu: $(KERNEL_BIN) $(FS_IMG)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
@@ -83,7 +71,3 @@ asm:
 	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust-2 > hyper.S 
 	riscv64-unknown-elf-objdump -d guest.bin > guest.S 
 
-
-$(FS_IMG):
-	cd minikernel && make fs-img 
-	cp minikernel/user/target/$(TARGET)/release/fs.img ./

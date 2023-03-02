@@ -57,7 +57,15 @@ fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
     match ctx.x[17] {
         SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
         SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
-        SBI_SET_TIMER => set_timer(ctx.x[10]),
+        SBI_SET_TIMER => {
+            set_timer(ctx.x[10]);
+            unsafe{ 
+                // clear guest timer interrupt pending
+                hvip::clear_vstip(); 
+                // enable timer interrupt
+                sie::set_stimer();
+            }
+        },
         _ => { return Err(VmmError::Unimplemented) }
     }
     Ok(())
@@ -124,11 +132,16 @@ pub fn handle_irq<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>,
     };
     host_plic.claim_complete[context_id] = irq; 
 
+    // set external interrupt pending, which trigger guest interrupt
     unsafe{ hvip::set_vseip() };
     
     // set irq pending in host vmm
     host_vmm.irq_pending = true;
 } 
+
+pub fn forward_exception(ctx: &mut TrapContext) {
+    
+}
 
 pub fn handle_internal_vmm_error(_err: VmmError) {
     todo!()
@@ -159,6 +172,7 @@ pub unsafe fn trap_handler() -> ! {
         },
         Trap::Exception(Exception::IllegalInstruction) => {
             // Invalid instruction, read/write csr
+            // forward exception
             panic!("read/write CSR");
         },
         Trap::Exception(Exception::InstructionGuestPageFault) => { 
@@ -183,6 +197,12 @@ pub unsafe fn trap_handler() -> ! {
     Trap::Interrupt(Interrupt::SupervisorExternal) => {
         handle_irq(&mut host_vmm, ctx);
     },
+    Trap::Interrupt(Interrupt::SupervisorTimer) => {
+        // set guest timer interrupt pending
+        hvip::set_vstip();
+        // disable timer interrupt
+        sie::clear_stimer();
+    }
         _ => panic!("scause: {:?}, sepc: {:#x}", scause.cause(), ctx.sepc)
     }
     drop(host_vmm);
