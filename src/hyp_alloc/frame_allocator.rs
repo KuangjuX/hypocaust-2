@@ -3,10 +3,9 @@
 
 use crate::page_table::{PhysPageNum, PhysAddr};
 use crate::constants::layout::MEMORY_END;
-use crate::sync::UPSafeCell;
 use alloc::vec::Vec;
+use spin::{Once, Mutex};
 use core::fmt::{self, Debug, Formatter};
-use lazy_static::*;
 
 /// manage a frame which has the same lifecycle as the tracker
 #[derive(Clone)]
@@ -87,34 +86,47 @@ impl FrameAllocator for StackFrameAllocator {
 
 type FrameAllocatorImpl = StackFrameAllocator;
 
-lazy_static! {
-    /// frame allocator instance through lazy_static!
-    pub static ref FRAME_ALLOCATOR: UPSafeCell<FrameAllocatorImpl> =
-        unsafe { UPSafeCell::new(FrameAllocatorImpl::new()) };
-}
+
+
+pub static mut FRAME_ALLOCATOR: Once<Mutex<FrameAllocatorImpl>> = Once::new();
 
 /// initiate the frame allocator using `einitrd` and `MEMORY_END`
 pub fn init_frame_allocator() {
     extern "C" {
         fn einitrd();
     }
-    FRAME_ALLOCATOR.exclusive_access().init(
-        PhysAddr::from(einitrd as usize).ceil(),
-        PhysAddr::from(MEMORY_END).floor(),
-    );
+    unsafe{
+        FRAME_ALLOCATOR.call_once(|| {
+            let mut frame_allocator = FrameAllocatorImpl::new();
+            frame_allocator.init(
+                PhysAddr::from(einitrd as usize).ceil(),
+                PhysAddr::from(MEMORY_END).floor(),
+            );
+            Mutex::new(frame_allocator)
+        }); 
+    }
 }
 
 /// allocate a frame
 pub fn frame_alloc() -> Option<FrameTracker> {
-    FRAME_ALLOCATOR
-        .exclusive_access()
-        .alloc()
-        .map(FrameTracker::new)
+    // FRAME_ALLOCATOR
+    //     .exclusive_access()
+    //     .alloc()
+    //     .map(FrameTracker::new)
+    unsafe{
+        let mut frame_allocator = FRAME_ALLOCATOR.get_mut();
+        let mut frame_allocator = frame_allocator.as_mut().unwrap().lock();
+        frame_allocator.alloc().map(FrameTracker::new)
+    }
 }
 
 /// deallocate a frame
 pub fn frame_dealloc(ppn: PhysPageNum) {
-    FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
+    unsafe{
+        let mut frame_allocator = FRAME_ALLOCATOR.get_mut();
+        let mut frame_allocator = frame_allocator.as_mut().unwrap().lock();
+        frame_allocator.dealloc(ppn);
+    }
 }
 
 #[allow(unused)]

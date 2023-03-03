@@ -222,7 +222,7 @@ pub unsafe fn trap_handler() -> ! {
 /// finally, jump to new addr of __restore asm function
 pub unsafe fn switch_to_guest() -> ! {
     set_user_trap_entry();
-    // 获取上下文切换环境
+    // get guest context
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
 
     // hgatp: set page table for guest physical address translation

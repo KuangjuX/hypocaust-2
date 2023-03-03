@@ -201,6 +201,15 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
     hvip::clear_vssip();
     hvip::clear_vstip();
 
+    // When the hypervisor is initialized, it is necessary to write the `hcounteren` register to all 1, because it is possible to read the `time` register in VU mode or VS mode.(refs: The counter-enable register `hcounteren` is a 32-bit register that controls the availability of the hardware performance monitoring counters to the guest virtual machine.  
+    // When the CY, TM, IR, or HPMn bit in the hcounteren register is clear, attempts to read the
+    // cycle, time, instret, or hpmcountern register while V=1 will cause a virtual instruction exception
+    // if the same bit in mcounteren is 1. When one of these bits is set, access to the corresponding register
+    // is permitted when V=1, unless prevented for some other reason. In VU-mode, a counter is not
+    // readable unless the applicable bits are set in both `hcounteren` and `scounteren`.  
+    // `hcounteren` must be implemented. However, any of the bits may be read-only zero, indicating
+    // reads to the corresponding counter will cause an exception when V=1. Hence, they are effectively
+    // WARL fields.) 
     hcounteren::write(0xffff_ffff);
 
     // enable all interupts
