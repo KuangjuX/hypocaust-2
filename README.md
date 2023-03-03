@@ -51,7 +51,7 @@ make qemu
 - [x] Emulate PLIC && Forward interrupts
 - [ ] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
-- [ ] run rCore-Tutorial-v3/xv6-riscv
+- [x] run rCore-Tutorial-v3
 - [ ] run RT-Thread
 - [ ] run Linux
 - [ ] multicore supported
