@@ -16,16 +16,16 @@ pub use crate::board::CLOCK_FREQ;
 pub mod layout {
     use super::PAGE_SIZE;
 
-    pub const MEMORY_START: usize = 0x80000000;
-    pub const MEMORY_END: usize = 0x88000000;
+    pub const MEMORY_START: usize = 0x8000_0000;
+    pub const MEMORY_END: usize = 0x8800_0000;
 
     /// 跳板页虚拟地址
     pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
     /// 上下文切换数据存储虚拟地址
     pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
 
-    pub const GUEST_START_PA: usize = 0x8800_0000;
-    pub const GUEST_START_VA: usize = 0x8000_0000;
+    pub const GUEST_START_PA: usize = 0x8820_0000;
+    pub const GUEST_START_VA: usize = 0x8020_0000;
 
     pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024;
 
