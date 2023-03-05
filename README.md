@@ -32,7 +32,7 @@ make qemu
 
 ### rCore-Tutorial-v3
 ```
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.bin
+cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.elf
 cp guest/rCore-Tutorial-v3/fs ./fs.img
 make qemu
 ```
