@@ -1,5 +1,6 @@
 /target
 guest.bin
+guest.elf
 .gdb_history
 /guest.S
 /hyper.S

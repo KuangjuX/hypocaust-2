@@ -45,8 +45,8 @@ pub use error::{ VmmError, VmmResult };
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
-static GUEST: [u8;include_bytes!("../guest.bin").len()] = 
- *include_bytes!("../guest.bin");
+static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
+ *include_bytes!("../guest.elf");
 
  #[cfg(not(feature = "embed_guest_kernel"))]
  static GUEST: [u8; 0] = [];

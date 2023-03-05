@@ -10,6 +10,35 @@ pub mod leagcy {
     pub const SBI_SET_TIMER: usize = 0;
 }
 
+pub const EXT_ID_BASE: usize = 0x10;
+pub const SBI_GET_SBI_SPEC_VERSION_FID: usize = 0;
+pub const SBI_GET_SBI_IMPL_ID_FID: usize = 1;
+pub const SBI_GET_SBI_IMPL_VERSION_FID: usize = 2;
+pub const SBI_PROBE_EXTENSION_FID: usize = 3;
+pub const SBI_GET_MVENDORID_FID: usize = 4;
+pub const SBI_GET_MARCHID_FID: usize = 5;
+pub const SBI_GET_MIMPID_FID: usize = 6;
+
+pub const SBI_EXTID_TIME: usize = 0x54494D45;
+pub const SBI_SET_TIMER_FID: usize = 0x0;
+
+pub const SBI_EXTID_IPI: usize = 0x735049;
+pub const SBI_SEND_IPI_FID: usize = 0x0;
+
+pub const SBI_EXTID_HSM: usize = 0x48534D;
+pub const SBI_HART_START_FID: usize = 0;
+pub const SBI_HART_STOP_FID: usize = 1;
+pub const SBI_HART_STATUS_FID: usize = 2;
+
+pub const SBI_EXTID_RFNC: usize = 0x52464E43;
+pub const SBI_REMOTE_FENCE_I_FID: usize = 0;
+pub const SBI_REMOTE_SFENCE_VMA_FID: usize = 1;
+pub const SBI_REMOTE_SFENCE_VMA_ASID_FID: usize = 2;
+pub const SBI_REMOTE_HFENCE_GVMA_FID: usize = 3;
+pub const SBI_REMOTE_HFENCE_GVMA_VMID_FID: usize = 4;
+pub const SBI_REMOTE_HFENCE_VVMA_FIDL: usize = 5;
+pub const SBI_REMOTE_HFENCE_VVMA_ASID_FID: usize = 6;
+
 
 #[inline(always)]
 /// general sbi call
@@ -47,3 +76,5 @@ pub fn shutdown() -> ! {
     sbi_rt::system_reset(sbi_rt::Shutdown, sbi_rt::SystemFailure);
     unreachable!()
 }
+
+

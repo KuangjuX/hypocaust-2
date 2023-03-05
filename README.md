@@ -25,14 +25,14 @@ make qemu
 ## Examples 
 ### minikernel
 ```
-cp guest/minikernel/minikernel ./guest.bin
+cp guest/minikernel/minikernel.elf ./guest.elf
 cp guest/minikernel/fs ./fs.img
 make qemu
 ```
 
 ### rCore-Tutorial-v3
 ```
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.bin
+cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.bin
 cp guest/rCore-Tutorial-v3/fs ./fs.img
 make qemu
 ```
@@ -93,9 +93,7 @@ reads to the corresponding counter will cause an exception when V=1. Hence, they
 WARL fields.) 
 - When the hypervisor initializes the memory for the guest, it needs to set all the mapping flags of the guest memory to RWX, although it needs to be modified in the end. Otherwise, when the guest allocates memory for the application, it will not be executable, causing `InstructionGuestPageFault`. 
 - The hypervisor currently does not support IOMMU, so when the guest needs to access DMA, the guest needs to be modified to complete the address translation from guest va to host pa.  
-- The hypervisor have to check `sstatus` and `sip` register to decide if it's necessary to forward interrupt.(refs: An interrupt i will trap to S-mode if both of the following are true: (a) either the current privilege
-mode is S and the SIE bit in the sstatus register is set, or the current privilege mode has less
-privilege than S-mode; and (b) bit i is set in both sip and sie.)
+- The default entry address of guest is 0x8020_0000. When the guest needs to set the entrance address to 0x8020_0000 when starting from S mode.
 
 ## Design Docs
 - [Trap Design](docs/trap.md)

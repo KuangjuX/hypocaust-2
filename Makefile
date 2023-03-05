@@ -12,7 +12,7 @@ FS_IMG 		:= fs.img
 
 # 客户操作系统
 GUEST_KERNEL_ELF	:= minikernel 
-GUEST 				:= guest.bin
+GUEST_ELF 			:= guest.elf
 
 GUEST_KERNEL_FEATURE:=$(if $(GUEST_KERNEL_ELF), --features embed_guest_kernel, )
 
