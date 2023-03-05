@@ -66,7 +66,7 @@ fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
                 sie::set_stimer();
             }
         },
-        _ => { return Err(VmmError::Unimplemented) }
+        _ => { panic!("ecall parameter: {}", ctx.x[17]) }
     }
     Ok(())
 }
@@ -151,8 +151,8 @@ pub fn forward_exception(ctx: &mut TrapContext) {
     ctx.sepc = vstvec::read().bits();
 }
 
-pub fn handle_internal_vmm_error(_err: VmmError) {
-    todo!()
+pub fn handle_internal_vmm_error(err: VmmError) {
+    panic!("err: {:?}", err);
 }
 
 
