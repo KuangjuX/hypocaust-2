@@ -14,18 +14,13 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 - RustSBI-QEMU Prereleased 2023-02-01
 - Rust 1.66.0 
 
-## Build
-```
-git clone https://github.com/KuangjuX/hypocaust-2.git
-cd hypocaust-2
-git submodule update --init
-make qemu
-```
 
 ## Examples 
 
 ### rCore-Tutorial-v3
 ```
+git clone https://github.com/KuangjuX/hypocaust-2.git
+cd hypocaust-2
 cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.elf
 cp guest/rCore-Tutorial-v3/fs ./fs.img
 make qemu
