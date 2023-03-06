@@ -41,7 +41,7 @@ make qemu
 - [ ] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
 - [x] run rCore-Tutorial-v3
-- [ ] run RT-Thread
+- [x] run RT-Thread
 - [ ] run Linux
 - [ ] multicore supported
 - [ ] multiguest supported

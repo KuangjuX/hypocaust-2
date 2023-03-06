@@ -337,6 +337,18 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             )
         }
 
+        gpm.push(
+            MapArea::new(
+                (0x1000_1000).into(),
+                (0x1000_1000 + 0x10000).into(),
+                Some((0x1000_1000).into()),
+                Some((0x1000_1000 + 0x10000).into()),
+                MapType::Linear,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
         if let Some(uart) = &machine.uart {
             gpm.push(
                 MapArea::new(

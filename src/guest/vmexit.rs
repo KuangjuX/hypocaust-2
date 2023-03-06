@@ -140,9 +140,9 @@ pub fn handle_internal_vmm_error(err: VmmError) {
 
 #[no_mangle]
 pub unsafe fn trap_handler() -> ! {
+    set_kernel_trap_entry();
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
     let scause = scause::read();
-    hdebug!("scause: {:?}", scause.cause());
     let host_vmm = HOST_VMM.get_mut().unwrap();
     let mut host_vmm = host_vmm.lock();
     let mut err = None;
