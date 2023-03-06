@@ -23,12 +23,6 @@ make qemu
 ```
 
 ## Examples 
-### minikernel
-```
-cp guest/minikernel/minikernel.elf ./guest.elf
-cp guest/minikernel/fs ./fs.img
-make qemu
-```
 
 ### rCore-Tutorial-v3
 ```
