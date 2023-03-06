@@ -5,16 +5,15 @@ use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
 use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
 use crate::page_table::PageTable;
-use crate::sbi::leagcy::SBI_SET_TIMER;
 use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
-use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip, vstvec };
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
 pub use super::context::TrapContext;
+use super::sbi::sbi_vs_handler;
 
 global_asm!(include_str!("trap.S"));
 
@@ -53,21 +52,7 @@ fn set_user_trap_entry() {
 
 
 fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
-    match ctx.x[17] {
-        SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
-        SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
-        SBI_SET_TIMER => {
-            set_timer(ctx.x[10]);
-            unsafe{ 
-                // clear guest timer interrupt pending
-                hvip::clear_vstip(); 
-                // enable timer interrupt
-                sie::set_stimer();
-            }
-        },
-        _ => { panic!("ecall parameter: {}", ctx.x[17]) }
-    }
-    Ok(())
+    sbi_vs_handler(ctx)
 }
 
 fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {

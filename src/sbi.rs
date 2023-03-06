@@ -10,7 +10,15 @@ pub mod leagcy {
     pub const SBI_SET_TIMER: usize = 0;
 }
 
-pub const EXT_ID_BASE: usize = 0x10;
+pub const SBI_SUCCESS: usize = 0;
+pub const SBI_ERR_FAILUER: isize = -1;
+pub const SBI_ERR_NOT_SUPPORTED: isize = -2;
+pub const SBI_ERR_INAVLID_PARAM: isize = -3;
+pub const SBI_ERR_DENIED: isize = -4;
+pub const SBI_ERR_INVALID_ADDRESS: isize = -5;
+pub const SBI_ERR_ALREADY_AVAILABLE: isize = -6; 
+
+pub const SBI_EXTID_BASE: usize = 0x10;
 pub const SBI_GET_SBI_SPEC_VERSION_FID: usize = 0;
 pub const SBI_GET_SBI_IMPL_ID_FID: usize = 1;
 pub const SBI_GET_SBI_IMPL_VERSION_FID: usize = 2;
