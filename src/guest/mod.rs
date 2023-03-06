@@ -6,6 +6,7 @@ use vmexit::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
 use self::vcpu::VCpu;
+pub use sbi::SbiRet;
 
 mod context;
 mod vcpu;

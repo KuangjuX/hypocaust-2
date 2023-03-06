@@ -5,13 +5,30 @@ use crate::sbi::leagcy::SBI_SET_TIMER;
 use crate::sbi::{
     SBI_EXTID_BASE, SBI_GET_SBI_SPEC_VERSION_FID, SBI_SUCCESS, 
     SBI_PROBE_EXTENSION_FID, SBI_EXTID_TIME, SBI_SET_TIMER_FID, 
-    SBI_ERR_NOT_SUPPORTED, console_putchar, console_getchar, set_timer, SBI_CONSOLE_PUTCHAR, SBI_CONSOLE_GETCHAR
+    SBI_ERR_NOT_SUPPORTED, console_putchar, console_getchar, set_timer, SBI_CONSOLE_PUTCHAR, SBI_CONSOLE_GETCHAR, 
+    SBI_GET_SBI_IMPL_ID_FID, SBI_GET_SBI_IMPL_VERSION_FID,
 };
+use sbi_rt;
 
 use riscv::register::{ hvip, sie };
 pub struct SbiRet {
     error: usize,
     value: usize
+}
+
+#[inline(always)]
+pub(crate) fn sbi_call_1(eid: usize, fid: usize, arg0: usize) -> SbiRet {
+    let (error, value);
+    unsafe {
+        core::arch::asm!(
+            "ecall",
+            in("a7") eid,
+            in("a6") fid,
+            inlateout("a0") arg0 => error,
+            lateout("a1") value,
+        );
+    }
+    SbiRet { error, value }
 }
 
 pub fn sbi_vs_handler(ctx: &mut TrapContext) -> VmmResult {
@@ -20,7 +37,7 @@ pub fn sbi_vs_handler(ctx: &mut TrapContext) -> VmmResult {
     let sbi_ret;
 
     match ext_id {
-        SBI_EXTID_BASE => sbi_ret = sbi_base_handler(fid),
+        SBI_EXTID_BASE => sbi_ret = sbi_base_handler(fid, ctx),
         SBI_EXTID_TIME => sbi_ret = sbi_time_handler(ctx.x[GprIndex::A0 as usize], fid),
         SBI_CONSOLE_PUTCHAR => sbi_ret = sbi_console_putchar_handler(ctx.x[GprIndex::A0 as usize]),
         SBI_CONSOLE_GETCHAR => sbi_ret = sbi_console_getchar_handler(),
@@ -29,19 +46,25 @@ pub fn sbi_vs_handler(ctx: &mut TrapContext) -> VmmResult {
     }
     ctx.x[GprIndex::A0 as usize] = sbi_ret.error;
     ctx.x[GprIndex::A1 as usize] = sbi_ret.value;
+
     Ok(())
     
 }
 
-pub fn sbi_base_handler(fid: usize) -> SbiRet {
+pub fn sbi_base_handler(fid: usize, ctx: &TrapContext) -> SbiRet {
     let mut sbi_ret = SbiRet{
         error: SBI_SUCCESS,
         value: 0
     };
     match fid {
-        SBI_GET_SBI_SPEC_VERSION_FID => sbi_ret.value = 2,
-        SBI_PROBE_EXTENSION_FID => sbi_ret.value = 0,
-        _ => unreachable!()
+        SBI_GET_SBI_SPEC_VERSION_FID => sbi_ret = sbi_call_1(SBI_EXTID_BASE, fid, 0),
+        SBI_GET_SBI_IMPL_ID_FID => sbi_ret.value = sbi_rt::get_sbi_impl_id(),
+        SBI_GET_SBI_IMPL_VERSION_FID => sbi_ret.value = sbi_rt::get_sbi_impl_version(),
+        SBI_PROBE_EXTENSION_FID => {
+            let extension = ctx.x[GprIndex::A0 as usize];
+            sbi_ret = sbi_call_1(SBI_EXTID_BASE, fid, extension);
+        }
+        _ => panic!("sbi base handler fid: {}", fid)
     }
     sbi_ret
 }

@@ -51,9 +51,6 @@ fn set_user_trap_entry() {
 }
 
 
-fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
-    sbi_vs_handler(ctx)
-}
 
 fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
     todo!()
@@ -97,7 +94,8 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
         }
         Ok(())
     }else{
-        Err(VmmError::DeviceNotFound)
+        panic!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
+        // Err(VmmError::DeviceNotFound)
     }
 }
 
@@ -144,6 +142,7 @@ pub fn handle_internal_vmm_error(err: VmmError) {
 pub unsafe fn trap_handler() -> ! {
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
     let scause = scause::read();
+    hdebug!("scause: {:?}", scause.cause());
     let host_vmm = HOST_VMM.get_mut().unwrap();
     let mut host_vmm = host_vmm.lock();
     let mut err = None;
@@ -152,7 +151,7 @@ pub unsafe fn trap_handler() -> ! {
             panic!("U-mode/VU-mode env call from VS-mode?");
         },
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
-            if let Err(vmm_err) = sbi_handler(ctx) {
+            if let Err(vmm_err) = sbi_vs_handler(ctx) {
                 err = Some(vmm_err);
             }
             ctx.sepc += 4;

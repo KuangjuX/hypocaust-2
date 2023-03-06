@@ -3,6 +3,7 @@
 use core::arch::asm;
 
 
+
 pub const SBI_CONSOLE_PUTCHAR: usize = 1;
 pub const SBI_CONSOLE_GETCHAR: usize = 2;
 
@@ -64,6 +65,7 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
     }
     ret
 }
+
 
 /// use sbi call to putchar in console (qemu uart handler)
 pub fn console_putchar(c: usize) {

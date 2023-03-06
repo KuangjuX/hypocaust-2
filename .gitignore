@@ -4,4 +4,3 @@ guest.elf
 .gdb_history
 /guest.S
 /hyper.S
-fs.img

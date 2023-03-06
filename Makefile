@@ -4,16 +4,30 @@ KERNEL_ELF	:= target/$(TARGET)/$(MODE)/hypocaust-2
 KERNEL_BIN	:= target/$(TARGET)/$(MODE)/hypocaust-2.bin
 CPUS		:= 1
 
+PLATFORM	?= rt-thread
+
 BOARD 		:= qemu
 
 GDB			:= gdb-multiarch
 
 FS_IMG 		:= fs.img
 
-# 客户操作系统
-GUEST_KERNEL_ELF	:= minikernel 
-GUEST_ELF 			:= guest.elf
+ifeq ($(PLATFORM), rCore-Tutorial-v3)
+QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
+QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+QEMUOPTS	+=-drive file=guest/rCore-Tutorial-v3/fs.img,if=none,format=raw,id=x0
+QEMUOPTS	+=-device virtio-blk-device,drive=x0
+QEMUOPTS	+=-device virtio-gpu-device
+QEMUOPTS	+=-device virtio-keyboard-device
+QEMUOPTS	+=-device virtio-mouse-device
+QEMUOPTS 	+=-device virtio-net-device,netdev=net0
+QEMUOPTS	+=-netdev user,id=net0,hostfwd=udp::6200-:2000
+else ifeq ($(PLATFORM), rt-thread)
+QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
+QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+endif
 
+GUEST_KERNEL_ELF := guest.elf
 GUEST_KERNEL_FEATURE:=$(if $(GUEST_KERNEL_ELF), --features embed_guest_kernel, )
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
@@ -25,15 +39,7 @@ BOOTLOADER	:= bootloader/rustsbi-qemu.bin
 
 KERNEL_ENTRY_PA := 0x80200000
 
-QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
-QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
-QEMUOPTS	+=-drive file=$(FS_IMG),if=none,format=raw,id=x0
-QEMUOPTS	+=-device virtio-blk-device,drive=x0
-QEMUOPTS	+=-device virtio-gpu-device
-QEMUOPTS	+=-device virtio-keyboard-device
-QEMUOPTS	+=-device virtio-mouse-device
-QEMUOPTS 	+=-device virtio-net-device,netdev=net0
-QEMUOPTS	+=-netdev user,id=net0,hostfwd=udp::6200-:2000
+
 
 
 build: $(GUEST)
@@ -46,7 +52,7 @@ $(KERNEL_BIN): build
 
 	
 
-qemu: $(KERNEL_BIN) $(FS_IMG)
+qemu: $(KERNEL_BIN)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
@@ -69,5 +75,5 @@ debug: $(KERNEL_BIN)
 
 asm:
 	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust-2 > hyper.S 
-	riscv64-unknown-elf-objdump -d guest.bin > guest.S 
+	riscv64-unknown-elf-objdump -d guest.elf > guest.S 
 
