@@ -24,7 +24,6 @@ mod page_table;
 mod constants;
 mod hyp_alloc;
 mod sync;
-mod trap;
 mod mm;
 mod guest;
 mod hypervisor;
@@ -33,12 +32,11 @@ mod error;
 
 
 use crate::constants::PAGE_SIZE;
-// use crate::hypervisor::fdt::MachineMeta;
 use crate::mm::{HostMemorySet, GuestMemorySet};
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
-use crate::trap::switch_to_guest;
+use crate::guest::vmexit::switch_to_guest;
 use crate::hypervisor::{ init_vmm, HOST_VMM, add_guest_queue };
 
 pub use error::{ VmmError, VmmResult };
@@ -127,7 +125,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         // hypervisor enable paging
         mm::enable_paging();
         // trap init
-        trap::init();
+        guest::vmexit::trap_init();
         // memory translation test
         mm::remap_test();
         // create guest struct

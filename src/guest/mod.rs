@@ -2,13 +2,15 @@ use crate::constants::layout::{TRAP_CONTEXT, GUEST_START_VA};
 use crate::hypervisor::fdt::MachineMeta;
 use crate::mm::{ GuestMemorySet, MemorySet };
 use crate::hypervisor::{ stack::hstack_alloc};
-use crate::trap::{TrapContext, trap_handler};
+use vmexit::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
 use self::vcpu::VCpu;
 
 mod context;
 mod vcpu;
+mod sbi;
+pub mod vmexit;
 
 
 pub struct Guest<G: GuestPageTable> {

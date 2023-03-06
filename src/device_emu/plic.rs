@@ -1,7 +1,7 @@
 use riscv::register::hvip;
 use riscv_decode::Instruction;
 
-use crate::trap::TrapContext;
+use crate::guest::vmexit::TrapContext;
 use crate::{VmmError, VmmResult};
 use crate::{constants::MAX_CONTEXTS, page_table::PageTable, guest::page_table::GuestPageTable, hypervisor::HostVmm};
 

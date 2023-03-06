@@ -1,6 +1,5 @@
 use core::arch::{ global_asm, asm };
 
-// use crate::constants::csr::sip::SEIP;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
@@ -15,13 +14,13 @@ use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, cons
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip, vstvec };
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
-mod context;
-pub use context::TrapContext;
+pub use super::context::TrapContext;
 
 global_asm!(include_str!("trap.S"));
 
+
 /// initialize CSR `stvec` as the entry of `__alltraps`
-pub fn init() {
+pub fn trap_init() {
     set_kernel_trap_entry();
 }
 
