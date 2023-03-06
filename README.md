@@ -19,11 +19,14 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 
 ### rCore-Tutorial-v3
 ```
-git clone https://github.com/KuangjuX/hypocaust-2.git
-cd hypocaust-2
+cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.elf
+make qemu PLATFORM=rCore-Tutorial-v3
+```
+
+### RT-Thread
+```
 cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.elf
-cp guest/rCore-Tutorial-v3/fs ./fs.img
-make qemu
+make qemu PLATFORM=rCore-Tutorial-v3
 ```
 
 ## RoadMap
