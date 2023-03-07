@@ -99,6 +99,10 @@ pub fn sbi_time_handler(stime: usize, fid: usize) -> SbiRet {
     return sbi_ret
 }
 
+// pub fn sbi_rfence_handler(fid: usize) {
+
+// }
+
 pub fn sbi_legacy_set_time(stime: usize) -> SbiRet {
     let sbi_ret = SbiRet {
         error: SBI_SUCCESS,
