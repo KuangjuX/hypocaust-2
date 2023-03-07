@@ -9,6 +9,8 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
   
 [![asciicast](https://asciinema.org/a/564050.png)](https://asciinema.org/a/564050)
 
+<iframe src="//player.bilibili.com/player.html?bvid=BV1DM411j7ns&page=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
 ## Environment
 - QEMU 7.2.0
 - RustSBI-QEMU Prereleased 2023-02-01
