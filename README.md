@@ -27,7 +27,7 @@ make qemu PLATFORM=rCore-Tutorial-v3
 
 ### RT-Thread
 ```
-cp guest/rt-thread.elf ./guest.elf
+cp guest/rtthread/rtthread.elf ./guest.elf
 make qemu PLATFORM=rt-thread
 ```
 
