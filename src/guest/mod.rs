@@ -2,13 +2,16 @@ use crate::constants::layout::{TRAP_CONTEXT, GUEST_START_VA};
 use crate::hypervisor::fdt::MachineMeta;
 use crate::mm::{ GuestMemorySet, MemorySet };
 use crate::hypervisor::{ stack::hstack_alloc};
-use crate::trap::{TrapContext, trap_handler};
+use vmexit::{TrapContext, trap_handler};
 
 use self::page_table::GuestPageTable;
 use self::vcpu::VCpu;
+pub use sbi::SbiRet;
 
 mod context;
 mod vcpu;
+mod sbi;
+pub mod vmexit;
 
 
 pub struct Guest<G: GuestPageTable> {
@@ -82,16 +85,22 @@ pub mod pmap {
 
     pub fn two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize, gpm: &GuestMemorySet<G>) -> Option<usize> {
         let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
-        if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
-            let guest_pa = translation.guest_pa;
-            if let Some(host_va) = gpm.translate_va(guest_pa) {
-                Some(host_va)
+        let guest_pa;
+        if guest_root != 0 {
+            if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
+                guest_pa = translation.guest_pa;
             }else{
                 return None
             }
         }else{
+            guest_pa = guest_va;
+        }
+        if let Some(host_va) = gpm.translate_va(guest_pa) {
+            Some(host_va)
+        }else{
             return None
         }
+        
     }
 
     // pub fn decode_inst_at_addr<P: GuestPageTable>(guest_va: usize, gpm: &MemorySet<P>) -> (usize, Option<riscv_decode::Instruction>){

@@ -1,27 +1,25 @@
 use core::arch::{ global_asm, asm };
 
-// use crate::constants::csr::sip::SEIP;
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
 use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
 use crate::page_table::PageTable;
-use crate::sbi::leagcy::SBI_SET_TIMER;
 use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
-use crate::sbi::{SBI_CONSOLE_PUTCHAR, console_putchar, SBI_CONSOLE_GETCHAR, console_getchar, set_timer};
 
 
 use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, htval, htinst, hvip, vstvec };
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
-mod context;
-pub use context::TrapContext;
+pub use super::context::TrapContext;
+use super::sbi::sbi_vs_handler;
 
 global_asm!(include_str!("trap.S"));
 
+
 /// initialize CSR `stvec` as the entry of `__alltraps`
-pub fn init() {
+pub fn trap_init() {
     set_kernel_trap_entry();
 }
 
@@ -53,23 +51,6 @@ fn set_user_trap_entry() {
 }
 
 
-fn sbi_handler(ctx: &mut TrapContext) -> VmmResult {
-    match ctx.x[17] {
-        SBI_CONSOLE_PUTCHAR => console_putchar(ctx.x[10]),
-        SBI_CONSOLE_GETCHAR => ctx.x[10] = console_getchar(),
-        SBI_SET_TIMER => {
-            set_timer(ctx.x[10]);
-            unsafe{ 
-                // clear guest timer interrupt pending
-                hvip::clear_vstip(); 
-                // enable timer interrupt
-                sie::set_stimer();
-            }
-        },
-        _ => { panic!("ecall parameter: {}", ctx.x[17]) }
-    }
-    Ok(())
-}
 
 fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
     todo!()
@@ -113,7 +94,11 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
         }
         Ok(())
     }else{
-        Err(VmmError::DeviceNotFound)
+        // panic!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
+        // Err(VmmError::DeviceNotFound)
+        ctx.sepc += 4;
+        Ok(())
+        // Err(VmmError::DeviceNotFound)
     }
 }
 
@@ -158,6 +143,7 @@ pub fn handle_internal_vmm_error(err: VmmError) {
 
 #[no_mangle]
 pub unsafe fn trap_handler() -> ! {
+    set_kernel_trap_entry();
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
     let scause = scause::read();
     let host_vmm = HOST_VMM.get_mut().unwrap();
@@ -168,7 +154,7 @@ pub unsafe fn trap_handler() -> ! {
             panic!("U-mode/VU-mode env call from VS-mode?");
         },
         Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
-            if let Err(vmm_err) = sbi_handler(ctx) {
+            if let Err(vmm_err) = sbi_vs_handler(ctx) {
                 err = Some(vmm_err);
             }
             ctx.sepc += 4;

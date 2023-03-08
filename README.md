@@ -9,6 +9,8 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
   
 [![asciicast](https://asciinema.org/a/564050.png)](https://asciinema.org/a/564050)
 
+
+
 ## Environment
 - QEMU 7.2.0
 - RustSBI-QEMU Prereleased 2023-02-01
@@ -19,11 +21,14 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 
 ### rCore-Tutorial-v3
 ```
-git clone https://github.com/KuangjuX/hypocaust-2.git
-cd hypocaust-2
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3 ./guest.elf
-cp guest/rCore-Tutorial-v3/fs ./fs.img
-make qemu
+cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.elf
+make qemu PLATFORM=rCore-Tutorial-v3
+```
+
+### RT-Thread
+```
+cp guest/rt-thread ./guest.elf
+make qemu PLATFORM=rCore-Tutorial-v3
 ```
 
 ## RoadMap
@@ -41,7 +46,7 @@ make qemu
 - [ ] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
 - [x] run rCore-Tutorial-v3
-- [ ] run RT-Thread
+- [x] run RT-Thread
 - [ ] run Linux
 - [ ] multicore supported
 - [ ] multiguest supported
