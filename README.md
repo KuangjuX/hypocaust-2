@@ -27,8 +27,8 @@ make qemu PLATFORM=rCore-Tutorial-v3
 
 ### RT-Thread
 ```
-cp guest/rt-thread ./guest.elf
-make qemu PLATFORM=rCore-Tutorial-v3
+cp guest/rt-thread.elf ./guest.elf
+make qemu PLATFORM=rt-thread
 ```
 
 ## RoadMap
@@ -36,7 +36,7 @@ make qemu PLATFORM=rCore-Tutorial-v3
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
 - [x] Run a tiny kernel that does not require any external hardware like disk devices.
 - [x] Handle read/write requests for CSRs from a guest
-- [x] Handle SBI calls(currently only `console_putchar`, `console_getchar` and `set_timer`)
+- [x] Handle SBI calls(currently only `console_putchar`, `console_getchar` and `set_timer` and `base`)
 - [x] Guest enable paging & setup 2-stage page table translation.
 - [x] Jump VU mode and run user applications
 - [x] Timers
