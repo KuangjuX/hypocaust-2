@@ -47,8 +47,16 @@ pub use error::{ VmmError, VmmResult };
 static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
  *include_bytes!("../guest.elf");
 
+// #[cfg(feature = "embed_guest_kernel")]
+// static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
+// *include_bytes!("../guest.dtb");
+
  #[cfg(not(feature = "embed_guest_kernel"))]
  static GUEST: [u8; 0] = [];
+
+//  #[cfg(not(feature = "embed_guest_kernel"))]
+//  static GUEST_DTB: [u8; 0] = [];
+
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
