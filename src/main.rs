@@ -29,6 +29,7 @@ mod guest;
 mod hypervisor;
 mod device_emu;
 mod error;
+mod drivers;
 
 
 use crate::constants::PAGE_SIZE;

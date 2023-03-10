@@ -37,10 +37,3 @@ impl DeviceId {
     }
 }
 
-impl TryFrom<Address> for DeviceId {
-    type Error = Error;
-
-    fn try_from(address: Address) -> Result<Self> {
-        Self::new(address.bits()).ok_or(Error::PciAddressTooLarge(address))
-    }
-}

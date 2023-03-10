@@ -27,7 +27,7 @@ pub mod layout {
     pub const GUEST_START_PA: usize = 0x8820_0000;
     pub const GUEST_START_VA: usize = 0x8020_0000;
 
-    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024;
+    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024 - 0x200000;
 
 
     pub use crate::board::MMIO;
