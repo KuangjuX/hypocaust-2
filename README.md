@@ -45,13 +45,13 @@ $ git rm qemu
 $ git submodule update --init --recursive
 $ ./configure --prefix=/opt/riscv64 
 $ sudo make linux -j8
-export PATH=$PATH:/opt/riscv64/bin
+$ export PATH=$PATH:/opt/riscv64/bin
 ```
 
 **Build Linux:**
 ```
-git clone https://github.com/torvalds/linux -b v6.2
-cd linux
+$ git clone https://github.com/torvalds/linux -b v6.2
+$ cd linux
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- defconfig
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- menuconfig
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
@@ -59,7 +59,7 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
 
 **Run bare Linux on qemu:**
 ```
-qemu-system-riscv64 -M virt -m 256M -nographic -bios $(BOOTLOADER)/rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
+$ qemu-system-riscv64 -M virt -m 256M -nographic -bios $(BOOTLOADER)/rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
 ```
 
 
@@ -129,3 +129,6 @@ WARL fields.)
 - [rustyvisor](https://github.com/stemnic/rustyvisor)
 - [bao-hypervisor](https://github.com/bao-project/bao-hypervisor)
 - [salus](https://github.com/rivosinc/salus)
+
+## Relative Links
+- [Summary about booting riscv linux on qemu](http://www.icfgblog.com/index.php/software/324.html)
