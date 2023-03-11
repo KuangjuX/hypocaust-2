@@ -78,6 +78,7 @@ dependencies = [
  "riscv-decode",
  "sbi-rt",
  "spin 0.9.5",
+ "tock-registers",
  "xmas-elf",
 ]
 
@@ -233,6 +234,12 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "tock-registers"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "696941a0aee7e276a165a978b37918fd5d22c55c3d6bda197813070ca9c0f21c"
 
 [[package]]
 name = "xmas-elf"

@@ -22,9 +22,14 @@ QEMUOPTS	+=-device virtio-keyboard-device
 QEMUOPTS	+=-device virtio-mouse-device
 QEMUOPTS 	+=-device virtio-net-device,netdev=net0
 QEMUOPTS	+=-netdev user,id=net0,hostfwd=udp::6200-:2000
+# QEMUOPTS    += -machine dumpdtb=rCore-Tutorial-v3.dtb
 else ifeq ($(PLATFORM), rt-thread)
 QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+QEMUOPTS    +=-drive if=none,file=guest/rtthread/sd.bin,format=raw,id=blk0 -device virtio-blk-device,drive=blk0,bus=virtio-mmio-bus.0
+QEMUOPTS 	+=-netdev user,id=tap0 -device virtio-net-device,netdev=tap0,bus=virtio-mmio-bus.1 
+QEMUOPTS 	+=-device virtio-serial-device -chardev socket,host=127.0.0.1,port=4321,server=on,wait=off,telnet=on,id=console0 -device virtserialport,chardev=console0
+# QEMUOPTS    += -machine dumpdtb=rtthread.dtb
 endif
 
 GUEST_KERNEL_ELF := guest.elf

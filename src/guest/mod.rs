@@ -76,11 +76,11 @@ pub mod pmap {
     }
 
     pub fn gpa2hpa(va: usize, guest_id: usize) -> usize {
-        va + (guest_id + 1) * segment_layout::GUEST_SEGMENT_SIZE
+        va + guest_id * segment_layout::GUEST_SEGMENT_SIZE
     }
 
-    pub fn hpa2gpa(pa: usize, gust_id: usize) -> usize {
-        pa - (gust_id + 1) * segment_layout::GUEST_SEGMENT_SIZE
+    pub fn hpa2gpa(pa: usize, guest_id: usize) -> usize {
+        pa - guest_id * segment_layout::GUEST_SEGMENT_SIZE
     }
 
     pub fn two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize, gpm: &GuestMemorySet<G>) -> Option<usize> {

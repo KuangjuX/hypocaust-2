@@ -29,6 +29,7 @@ mod guest;
 mod hypervisor;
 mod device_emu;
 mod error;
+mod drivers;
 
 
 use crate::constants::PAGE_SIZE;
@@ -46,8 +47,16 @@ pub use error::{ VmmError, VmmResult };
 static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
  *include_bytes!("../guest.elf");
 
+#[cfg(feature = "embed_guest_kernel")]
+static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
+*include_bytes!("../guest.dtb");
+
  #[cfg(not(feature = "embed_guest_kernel"))]
  static GUEST: [u8; 0] = [];
+
+ #[cfg(not(feature = "embed_guest_kernel"))]
+ static GUEST_DTB: [u8; 0] = [];
+
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
@@ -108,7 +117,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         hyp_alloc::heap_init();
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // TODO: parse guest fdt
-        let guest_machine = machine.clone();
+        let guest_machine = hypervisor::fdt::MachineMeta::parse(GUEST_DTB.as_ptr() as usize);
         // initialize vmm
         let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);
