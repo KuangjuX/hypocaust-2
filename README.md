@@ -38,6 +38,14 @@ cp guest/rtthread/rtthread.dtb ./guest.dtb
 make qemu PLATFORM=rt-thread
 ```
 
+or 
+```
+or 
+```
+./srcipts/rt-thread.sh && make qemu PLATFORM=rt-thread
+```
+```
+
 ## RoadMap
 - [x] Load guest elf image.
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
