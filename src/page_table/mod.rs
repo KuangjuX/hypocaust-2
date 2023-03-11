@@ -8,7 +8,8 @@ pub use pte::{ PTEFlags, PageTableEntry };
 pub use address::{ PhysPageNum, VirtPageNum, PhysAddr, VirtAddr, StepByOne, VPNRange, PPNRange };
 pub use sv39::PageTableSv39;
 
-use crate::guest::{page_table::GuestPageTable, pmap::gpa2hpa};
+use crate::guest::page_table::GuestPageTable;
+use crate::guest::pmap::gpa2hpa;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PageTableLevel {
@@ -61,10 +62,8 @@ pub trait PageTable: Clone {
 }
 
 pub fn translate_guest_va<P: GuestPageTable>(guest_id: usize, root: usize, guest_va: usize) -> Option<AddressTranslation> {
-    htracking!("guest va: {:#x}", guest_va);
     P::walk_page_table(root, guest_va, |va| {
         let pa = gpa2hpa(va, guest_id);
-        htracking!("pa: {:#x}, va: {:#x}", pa, va);
         unsafe{ core::ptr::read(pa as *const usize) }
     }).map(|t| {
         AddressTranslation { 

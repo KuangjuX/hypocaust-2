@@ -21,14 +21,12 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 
 ### rCore-Tutorial-v3
 ```
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.elf
-make qemu PLATFORM=rCore-Tutorial-v3
+./srcipts/rCore-Tutorial-v3.sh && make qemu PLATFORM=rCore-Tutorial-v3
 ```
 
 ### RT-Thread
 ```
-cp guest/rtthread/rtthread.elf ./guest.elf
-make qemu PLATFORM=rt-thread
+./srcipts/rt-thread.sh && make qemu PLATFORM=rt-thread
 ```
 
 ### Linux
@@ -64,6 +62,7 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
 qemu-system-riscv64 -M virt -m 256M -nographic -bios rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
 ```
 
+
 ## RoadMap
 - [x] Load guest elf image.
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
@@ -76,7 +75,7 @@ qemu-system-riscv64 -M virt -m 256M -nographic -bios rustsbi-qemu.bin -kernel $(
 - [x] Passthrough virtio block device
 - [x] Configure hypervisor and guest memory addresses and peripheral space mapping by device tree.
 - [x] Emulate PLIC && Forward interrupts
-- [ ] Expose and/or emulate peripherals
+- [x] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
 - [x] run rCore-Tutorial-v3
 - [x] run RT-Thread
@@ -119,8 +118,7 @@ readable unless the applicable bits are set in both `hcounteren` and `scounteren
 reads to the corresponding counter will cause an exception when V=1. Hence, they are effectively
 WARL fields.) 
 - When the hypervisor initializes the memory for the guest, it needs to set all the mapping flags of the guest memory to RWX, although it needs to be modified in the end. Otherwise, when the guest allocates memory for the application, it will not be executable, causing `InstructionGuestPageFault`. 
-- The hypervisor currently does not support IOMMU, so when the guest needs to access DMA, the guest needs to be modified to complete the address translation from guest va to host pa.  
-- The default entry address of guest is 0x8020_0000. When the guest needs to set the entrance address to 0x8020_0000 when starting from S mode.
+- The hypervisor currently does not support IOMMU, so it is necessary to have all its memory configured with identify mapping when guest wishes to use a DMA device.
 
 ## Design Docs
 - [Trap Design](docs/trap.md)
