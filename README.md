@@ -40,11 +40,9 @@ make qemu PLATFORM=rt-thread
 
 or 
 ```
-or 
-```
 ./srcipts/rt-thread.sh && make qemu PLATFORM=rt-thread
 ```
-```
+
 
 ## RoadMap
 - [x] Load guest elf image.
