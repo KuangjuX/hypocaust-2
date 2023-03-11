@@ -47,15 +47,15 @@ pub use error::{ VmmError, VmmResult };
 static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
  *include_bytes!("../guest.elf");
 
-// #[cfg(feature = "embed_guest_kernel")]
-// static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
-// *include_bytes!("../guest.dtb");
+#[cfg(feature = "embed_guest_kernel")]
+static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
+*include_bytes!("../guest.dtb");
 
  #[cfg(not(feature = "embed_guest_kernel"))]
  static GUEST: [u8; 0] = [];
 
-//  #[cfg(not(feature = "embed_guest_kernel"))]
-//  static GUEST_DTB: [u8; 0] = [];
+ #[cfg(not(feature = "embed_guest_kernel"))]
+ static GUEST_DTB: [u8; 0] = [];
 
 
 /// hypervisor boot stack size
@@ -117,7 +117,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         hyp_alloc::heap_init();
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // TODO: parse guest fdt
-        let guest_machine = machine.clone();
+        let guest_machine = hypervisor::fdt::MachineMeta::parse(GUEST_DTB.as_ptr() as usize);
         // initialize vmm
         let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);
