@@ -21,24 +21,10 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 
 ### rCore-Tutorial-v3
 ```
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.elf ./guest.elf
-cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.dtb ./guest.dtb
-make qemu PLATFORM=rCore-Tutorial-v3
-```
-
-or 
-```
 ./srcipts/rCore-Tutorial-v3.sh && make qemu PLATFORM=rCore-Tutorial-v3
 ```
 
 ### RT-Thread
-```
-cp guest/rtthread/rtthread.elf ./guest.elf
-cp guest/rtthread/rtthread.dtb ./guest.dtb
-make qemu PLATFORM=rt-thread
-```
-
-or 
 ```
 ./srcipts/rt-thread.sh && make qemu PLATFORM=rt-thread
 ```
