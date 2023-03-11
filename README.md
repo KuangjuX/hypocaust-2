@@ -26,6 +26,11 @@ cp guest/rCore-Tutorial-v3/rCore-Tutorial-v3.dtb ./guest.dtb
 make qemu PLATFORM=rCore-Tutorial-v3
 ```
 
+or 
+```
+./srcipts/rCore-Tutorial-v3.sh && make qemu PLATFORM=rCore-Tutorial-v3
+```
+
 ### RT-Thread
 ```
 cp guest/rtthread/rtthread.elf ./guest.elf
