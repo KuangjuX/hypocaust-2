@@ -31,6 +31,39 @@ cp guest/rtthread/rtthread.elf ./guest.elf
 make qemu PLATFORM=rt-thread
 ```
 
+### Linux
+**Toolchains:**
+```
+$ sudo apt install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev \
+                 gawk build-essential bison flex texinfo gperf libtool patchutils bc \
+                 zlib1g-dev libexpat-dev git \
+                 libglib2.0-dev libfdt-dev libpixman-1-dev \
+                 libncurses5-dev libncursesw5-dev
+
+# install riscv linux toolchain
+$ git clone https://gitee.com/mirrors/riscv-gnu-toolchain --depth=1
+$ cd riscv-gnu-toolchain
+$ git rm qemu
+$ git submodule update --init --recursive
+$ ./configure --prefix=/opt/riscv64 
+$ sudo make linux -j8
+export PATH=$PATH:/opt/riscv64/bin
+```
+
+**Build Linux:**
+```
+git clone https://github.com/torvalds/linux -b v6.2
+cd linux
+$ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- defconfig
+$ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- menuconfig
+$ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
+```
+
+**Run bare Linux on qemu:**
+```
+qemu-system-riscv64 -M virt -m 256M -nographic -bios rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
+```
+
 ## RoadMap
 - [x] Load guest elf image.
 - [x] Jump guest loaded to a VM while enabling guest physical address translation by `hgatp`.
