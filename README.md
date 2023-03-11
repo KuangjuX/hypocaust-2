@@ -42,7 +42,7 @@ The purpose of this project is to run on bare metal or embedded devices, but it 
 - [x] Passthrough virtio block device
 - [x] Configure hypervisor and guest memory addresses and peripheral space mapping by device tree.
 - [x] Emulate PLIC && Forward interrupts
-- [ ] Expose and/or emulate peripherals
+- [x] Expose and/or emulate peripherals
 - [ ] IOMMU enabled
 - [x] run rCore-Tutorial-v3
 - [x] run RT-Thread
