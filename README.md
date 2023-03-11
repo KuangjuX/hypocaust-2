@@ -59,7 +59,7 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
 
 **Run bare Linux on qemu:**
 ```
-qemu-system-riscv64 -M virt -m 256M -nographic -bios rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
+qemu-system-riscv64 -M virt -m 256M -nographic -bios $(BOOTLOADER)/rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
 ```
 
 
