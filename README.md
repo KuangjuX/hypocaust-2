@@ -131,6 +131,6 @@ WARL fields.)
 - [salus](https://github.com/rivosinc/salus)
 
 ## Relative Links
-- [Summary about booting riscv linux on qemu](http://www.icfgblog.com/index.php/software/324.html)
+- [QEMU 运行 RISC-V linux 总结](http://www.icfgblog.com/index.php/software/324.html)
 - [QEMU 启动方式分析(1): QEMU 及 RISC-V 启动流程简介](https://gitee.com/YJMSTR/riscv-linux/blob/master/articles/20220816-introduction-to-qemu-and-riscv-upstream-boot-flow.md#https://gitee.com/link?target=https%3A%2F%2Ftinylab.org%2Friscv-uefi-part1%2F)
 - [QEMU 启动方式分析(2): QEMU virt 平台下通过 OpenSBI + U-Boot 引导 RISC-V 64 Linux](https://gitee.com/YJMSTR/riscv-linux/blob/master/articles/20220823-boot-riscv-linux-kernel-with-uboot-on-qemu-virt-machine.md)
