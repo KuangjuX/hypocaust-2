@@ -48,7 +48,7 @@ __alltraps:
     # 跳转到 trap 处理函数
     jr t1
 
-# a0: trap context addr; a1: hgatp
+# a0: trap context addr
 __restore:
     # 注意,此时不需要进行页表切换,此时仍在 HS 态,使用 satp 进行 MMU 地址翻译
     # 将 sscratch 和 sp 全部写入 a0(Trap Context)

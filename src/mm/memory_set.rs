@@ -240,15 +240,17 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
         }
     }
 
-    pub fn new_guest(guest_data: &[u8], gpm_size: usize, machine: &MachineMeta) -> Self {
+    pub fn new_guest(
+        guest_data: &[u8], 
+        gpm_size: usize, 
+        guest_machine: &MachineMeta
+    ) -> Self {
         let mut gpm = Self::new_guest_bare();
         let elf = xmas_elf::ElfFile::new(guest_data).unwrap();
         let elf_header = elf.header;
         let magic = elf_header.pt1.magic;
         assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
         let ph_count = elf_header.pt2.ph_count();
-        // 物理内存,从 0x8800_0000 开始
-        // 虚拟内存,从 0x8000_0000 开始
         let mut paddr = GUEST_START_PA as *mut u8;
         let mut last_paddr = GUEST_START_PA as *mut u8;
         for i in 0..ph_count {
@@ -283,6 +285,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     MapType::Linear, 
                     map_perm
                 );
+                hdebug!("va: [{:#x}: {:#x}], pa: [{:#x}: {:#x}]", start_va.0, end_va.0, last_paddr as usize, paddr as usize);
                 last_paddr = paddr;
                 gpm.push(map_area, None);
             }
@@ -308,7 +311,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
         gpm.map_trampoline();
         
         // map qemu test
-        if let Some(test) = &machine.test_finisher_address {
+        if let Some(test) = &guest_machine.test_finisher_address {
             gpm.push(
                 MapArea::new(
                     test.base_address.into(),
@@ -323,7 +326,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
         }
 
         // map virtio device
-        for virtio_dev in machine.virtio.iter() {
+        for virtio_dev in guest_machine.virtio.iter() {
             gpm.push(
                 MapArea::new(
                     virtio_dev.base_address.into(),
@@ -338,7 +341,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
         }
 
 
-        if let Some(uart) = &machine.uart {
+        if let Some(uart) = &guest_machine.uart {
             gpm.push(
                 MapArea::new(
                     uart.base_address.into(),
@@ -352,7 +355,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             );
         }
 
-        if let Some(clint) = &machine.clint {
+        if let Some(clint) = &guest_machine.clint {
             gpm.push(
                 MapArea::new(
                     clint.base_address.into(),
@@ -366,7 +369,100 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             );
         }
 
-        if let Some(plic) = &machine.plic {
+        if let Some(plic) = &guest_machine.plic {
+            gpm.push(
+                MapArea::new(
+                    plic.base_address.into(),
+                    (plic.base_address + 0x0020_0000).into(),
+                    Some(plic.base_address.into()),
+                    Some((plic.base_address + 0x0020_0000).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        gpm
+    }
+
+    pub fn new_guest_without_load(guest_machine: &MachineMeta) -> Self {
+        let mut gpm = Self::new_guest_bare();
+
+        gpm.push(MapArea::new(
+                VirtAddr(guest_machine.physical_memory_offset), 
+                VirtAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size), 
+                Some(PhysAddr(guest_machine.physical_memory_offset)), 
+                Some(PhysAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size)), 
+                MapType::Linear, 
+                MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X
+            ),
+            None
+        );
+        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size, guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size);
+
+        gpm.map_trampoline();
+        
+        // map qemu test
+        if let Some(test) = &guest_machine.test_finisher_address {
+            gpm.push(
+                MapArea::new(
+                    test.base_address.into(),
+                    (test.base_address + test.size).into(),
+                    Some(test.base_address.into()),
+                    Some((test.base_address + test.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        // map virtio device
+        for virtio_dev in guest_machine.virtio.iter() {
+            gpm.push(
+                MapArea::new(
+                    virtio_dev.base_address.into(),
+                    (virtio_dev.base_address + virtio_dev.size).into(),
+                    Some(virtio_dev.base_address.into()),
+                    Some((virtio_dev.base_address + virtio_dev.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ),
+                None,
+            )
+        }
+
+
+        if let Some(uart) = &guest_machine.uart {
+            gpm.push(
+                MapArea::new(
+                    uart.base_address.into(),
+                    (uart.base_address + uart.size).into(),
+                    Some(uart.base_address.into()),
+                    Some((uart.base_address + uart.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        if let Some(clint) = &guest_machine.clint {
+            gpm.push(
+                MapArea::new(
+                    clint.base_address.into(),
+                    (clint.base_address + clint.size).into(),
+                    Some(clint.base_address.into()),
+                    Some((clint.base_address + clint.size).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        if let Some(plic) = &guest_machine.plic {
             gpm.push(
                 MapArea::new(
                     plic.base_address.into(),

@@ -90,16 +90,16 @@ type FrameAllocatorImpl = StackFrameAllocator;
 
 pub static mut FRAME_ALLOCATOR: Once<Mutex<FrameAllocatorImpl>> = Once::new();
 
-/// initiate the frame allocator using `einitrd` and `MEMORY_END`
+/// initiate the frame allocator using `ekernel` and `MEMORY_END`
 pub fn init_frame_allocator() {
     extern "C" {
-        fn einitrd();
+        fn ekernel();
     }
     unsafe{
         FRAME_ALLOCATOR.call_once(|| {
             let mut frame_allocator = FrameAllocatorImpl::new();
             frame_allocator.init(
-                PhysAddr::from(einitrd as usize).ceil(),
+                PhysAddr::from(ekernel as usize).ceil(),
                 PhysAddr::from(MEMORY_END).floor(),
             );
             Mutex::new(frame_allocator)

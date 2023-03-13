@@ -143,6 +143,7 @@ pub fn handle_internal_vmm_error(err: VmmError) {
 
 
 #[no_mangle]
+#[allow(unreachable_code)]
 pub unsafe fn trap_handler() -> ! {
     set_kernel_trap_entry();
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
@@ -201,6 +202,73 @@ pub unsafe fn trap_handler() -> ! {
         handle_internal_vmm_error(err)
     }
     switch_to_guest()
+}
+
+
+
+pub unsafe fn hart_entry_1() -> ! {
+    set_user_trap_entry();
+    // get guest context
+    let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
+
+    // hgatp: set page table for guest physical address translation
+    if riscv::register::hgatp::read().bits() != ctx.hgatp {
+        let hgatp = riscv::register::hgatp::Hgatp::from_bits(ctx.hgatp);
+        hgatp.write(); 
+        core::arch::riscv64::hfence_gvma_all();
+        assert_eq!(hgatp.bits(), riscv::register::hgatp::read().bits());
+    }
+    hart_entry_2()
+}
+
+#[naked]
+pub unsafe extern "C" fn hart_entry_2() -> ! {
+    core::arch::asm!(
+        "li a0, {trap_context}",
+        "csrw sscratch, a0",
+        "mv sp, a0",
+        "ld t0, 32*8(sp)",
+        "ld t1, 33*8(sp)",
+        "csrw sstatus, t0",
+        "csrw sepc, t1",
+        "ld t0, 37*8(sp)",
+        "csrw hstatus, t0",
+        "ld x1, 1*8(sp)",
+        "ld x3, 3*8(sp)",
+        "ld x5, 5*8(sp)",
+        "ld x6, 6*8(sp)",
+        "ld x7, 7*8(sp)",
+        "ld x8, 8*8(sp)",
+        "ld x9, 9*8(sp)",
+        "ld x10, 10*8(sp)",
+        "ld x11, 11*8(sp)",
+        "ld x12, 12*8(sp)",
+        "ld x13, 13*8(sp)",
+        "ld x14, 14*8(sp)",
+        "ld x15, 15*8(sp)",
+        "ld x16, 16*8(sp)",
+        "ld x17, 17*8(sp)",
+        "ld x18, 18*8(sp)",
+        "ld x19, 19*8(sp)",
+        "ld x20, 20*8(sp)",
+        "ld x21, 21*8(sp)",
+        "ld x22, 22*8(sp)",
+        "ld x23, 23*8(sp)",
+        "ld x24, 24*8(sp)",
+        "ld x25, 25*8(sp)",
+        "ld x26, 26*8(sp)",
+        "ld x27, 27*8(sp)",
+        "ld x28, 28*8(sp)",
+        "ld x29, 29*8(sp)",
+        "ld x30, 30*8(sp)",
+        "ld x31, 31*8(sp)",
+        "ld sp, 2*8(sp)",
+        "li a1, {guest_dtb}",
+        "sret",
+        trap_context = const TRAP_CONTEXT,
+        guest_dtb = const 0x9000_0000 as usize,
+        options(noreturn)
+    )
 }
 
 #[no_mangle]

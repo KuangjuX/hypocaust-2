@@ -47,12 +47,15 @@ SECTIONS
     ebss = .;
     ekernel = .;
 
-    . = ALIGN(4K);
-    sinitrd = .;
+    . = 0x90000000;
+    .dtb : {
+        *(.dtb)
+    }
+
+    . = 0x90200000;
     .initrd : {
         *(.initrd)
     }
-    einitrd = .;
 
     /DISCARD/ : {
         *(.eh_frame)

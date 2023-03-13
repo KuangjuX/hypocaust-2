@@ -37,38 +37,44 @@ use crate::mm::{HostMemorySet, GuestMemorySet};
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
 use crate::page_table::PageTableSv39;
 use crate::guest::Guest;
-use crate::guest::vmexit::switch_to_guest;
+use crate::guest::vmexit::hart_entry_1;
 use crate::hypervisor::{ init_vmm, HOST_VMM, add_guest_queue };
 
 pub use error::{ VmmError, VmmResult };
 
-#[link_section = ".initrd"]
-#[cfg(feature = "embed_guest_kernel")]
-static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
- *include_bytes!("../guest.elf");
-
-#[cfg(feature = "embed_guest_kernel")]
-static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
+#[link_section = ".dtb"]
+pub static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
 *include_bytes!("../guest.dtb");
 
- #[cfg(not(feature = "embed_guest_kernel"))]
- static GUEST: [u8; 0] = [];
+// #[link_section = ".initrd"]
+// #[cfg(feature = "embed_guest_kernel")]
+// static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
+//  *include_bytes!("../guest.elf");
 
- #[cfg(not(feature = "embed_guest_kernel"))]
- static GUEST_DTB: [u8; 0] = [];
+//  #[cfg(not(feature = "embed_guest_kernel"))]
+//  static GUEST: [u8; 0] = [];
+
+#[link_section = ".initrd"]
+#[cfg(feature = "embed_guest_kernel")]
+static GUEST: [u8;include_bytes!("../guest.bin").len()] = 
+ *include_bytes!("../guest.bin");
+
+#[link_section = ".initrd"]
+#[cfg(not(feature = "embed_guest_kernel"))]
+static GUEST: [u8; 0] = [];
 
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
 
 #[link_section = ".bss.stack"]
-/// hypocaust boot stack
+/// hypervisor boot stack
 static BOOT_STACK: [u8; BOOT_STACK_SIZE] = [0u8; BOOT_STACK_SIZE];
 
 #[link_section = ".text.entry"]
 #[export_name = "_start"]
 #[naked]
-/// hypocaust entrypoint
+/// hypervisor entrypoint
 pub unsafe extern "C" fn start() -> ! {
     core::arch::asm!(
         // prepare stack
@@ -98,10 +104,14 @@ fn clear_bss() {
 }
 
 
+
+
 #[no_mangle]
 unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         clear_bss();
+        hdebug!("guest entry: {:#x}, guest size: {:#x}", GUEST.as_ptr() as usize, GUEST.len());
+        hdebug!("guest dtb addr: {:#x}", GUEST_DTB.as_ptr() as usize);
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
         // detect h extension
@@ -122,11 +132,13 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);
         // create guest memory set
-        let gpm = GuestMemorySet::<PageTableSv39>::new_guest(
-            &GUEST, 
-            GUEST_DEFAULT_SIZE,
-            &guest_machine
-        );
+        // let gpm = GuestMemorySet::<PageTableSv39>::new_guest(
+        //     &GUEST, 
+        //     GUEST_DEFAULT_SIZE,
+        //     &guest_machine
+        // );
+
+        let gpm = GuestMemorySet::<PageTableSv39>::new_guest_without_load(&guest_machine);
 
         let mut host_vmm = HOST_VMM.get_mut().unwrap().lock();
         host_vmm.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
@@ -141,8 +153,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         let guest = Guest::new(0, gpm, guest_machine);
         add_guest_queue(guest);
         hdebug!("Switch to guest......");
-        // switch context and jump to guest
-        switch_to_guest()
+        hart_entry_1()
     }else{
         unreachable!()
     }

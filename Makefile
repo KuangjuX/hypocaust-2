@@ -33,6 +33,9 @@ QEMUOPTS 	+=-device virtio-serial-device -chardev socket,host=127.0.0.1,port=432
 else ifeq ($(PLATFORM), linux)
 QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+else ifeq ($(PLATFORM), u-boot)
+QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
+QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 endif
 
 GUEST_KERNEL_ELF := guest.elf
