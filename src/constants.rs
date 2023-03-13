@@ -21,6 +21,7 @@ pub mod layout {
 
     /// 跳板页虚拟地址
     pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
+
     /// 上下文切换数据存储虚拟地址
     pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
 
@@ -29,6 +30,7 @@ pub mod layout {
 
     pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024 - 0x200000;
 
+    pub const GUEST_DTB_ADDR: usize = 0x9000_0000;
 
     pub use crate::board::MMIO;
 }

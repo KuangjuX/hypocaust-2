@@ -64,6 +64,7 @@ pub trait PageTable: Clone {
 pub fn translate_guest_va<P: GuestPageTable>(guest_id: usize, root: usize, guest_va: usize) -> Option<AddressTranslation> {
     P::walk_page_table(root, guest_va, |va| {
         let pa = gpa2hpa(va, guest_id);
+        htracking!("pa: {:#x}", pa);
         unsafe{ core::ptr::read(pa as *const usize) }
     }).map(|t| {
         AddressTranslation { 

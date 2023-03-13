@@ -1,6 +1,6 @@
 use core::arch::{ global_asm, asm };
 
-use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT };
+use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT, GUEST_DTB_ADDR };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
 use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn hart_entry_2() -> ! {
         "li a1, {guest_dtb}",
         "sret",
         trap_context = const TRAP_CONTEXT,
-        guest_dtb = const 0x9000_0000 as usize,
+        guest_dtb = const GUEST_DTB_ADDR,
         options(noreturn)
     )
 }

@@ -152,7 +152,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         // create guest struct
         let guest = Guest::new(0, gpm, guest_machine);
         add_guest_queue(guest);
-        hdebug!("Switch to guest......");
+        hdebug!("Jump to guest......");
         hart_entry_1()
     }else{
         unreachable!()
