@@ -30,9 +30,9 @@
 		compatible = "qemu,platform\0simple-bus";
 	};
 
-	memory@90000000 {
+	memory@90200000 {
 		device_type = "memory";
-		reg = <0x00 0x90000000 0x00 0x40000000>;
+		reg = <0x00 0x90200000 0x00 0x80000000>;
 	};
 
 	cpus {

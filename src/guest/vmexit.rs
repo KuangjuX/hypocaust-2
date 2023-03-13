@@ -80,6 +80,7 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
                     return Err(VmmError::DecodeInstError)
                 }
             }else{
+                herror!("inst addr: {:#x}", inst_addr);
                 return Err(VmmError::TranslationError)
             }
         }else if inst == 0x3020 || inst == 0x3000 {

@@ -6,7 +6,7 @@ use crate::sbi::{
     SBI_EXTID_BASE, SBI_GET_SBI_SPEC_VERSION_FID, SBI_SUCCESS, 
     SBI_PROBE_EXTENSION_FID, SBI_EXTID_TIME, SBI_SET_TIMER_FID, 
     SBI_ERR_NOT_SUPPORTED, console_putchar, console_getchar, set_timer, SBI_CONSOLE_PUTCHAR, SBI_CONSOLE_GETCHAR, 
-    SBI_GET_SBI_IMPL_ID_FID, SBI_GET_SBI_IMPL_VERSION_FID,
+    SBI_GET_SBI_IMPL_ID_FID, SBI_GET_SBI_IMPL_VERSION_FID, SBI_GET_MVENDORID_FID, SBI_GET_MARCHID_FID, SBI_GET_MIMPID_FID,
 };
 use sbi_rt;
 
@@ -63,7 +63,10 @@ pub fn sbi_base_handler(fid: usize, ctx: &TrapContext) -> SbiRet {
         SBI_PROBE_EXTENSION_FID => {
             let extension = ctx.x[GprIndex::A0 as usize];
             sbi_ret = sbi_call_1(SBI_EXTID_BASE, fid, extension);
-        }
+        },
+        SBI_GET_MVENDORID_FID => sbi_ret.value = sbi_rt::get_mvendorid(),
+        SBI_GET_MARCHID_FID => sbi_ret.value = sbi_rt::get_marchid(),
+        SBI_GET_MIMPID_FID => sbi_ret.value = sbi_rt::get_mimpid(),
         _ => panic!("sbi base handler fid: {}", fid)
     }
     sbi_ret
