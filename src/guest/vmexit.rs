@@ -225,6 +225,7 @@ pub unsafe fn hart_entry_1() -> ! {
 #[naked]
 pub unsafe extern "C" fn hart_entry_2() -> ! {
     core::arch::asm!(
+        "fence.i",
         "li a0, {trap_context}",
         "csrw sscratch, a0",
         "mv sp, a0",

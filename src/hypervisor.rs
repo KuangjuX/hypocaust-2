@@ -217,7 +217,9 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
     sie::set_ssoft();
     sie::set_stimer();
 
-    
+    core::arch::asm!(
+        "csrw vsatp, 0"
+    );
 
     // initialize HOST_VMM
     HOST_VMM.call_once(|| {
