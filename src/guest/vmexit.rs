@@ -95,12 +95,9 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
         }
         Ok(())
     }else{
-        // panic!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
+        panic!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
         // Err(VmmError::DeviceNotFound)
         // todo: handle device
-        ctx.sepc += 4;
-        Ok(())
-        // Err(VmmError::DeviceNotFound)
     }
 }
 
@@ -281,6 +278,7 @@ pub unsafe fn switch_to_guest() -> ! {
     set_user_trap_entry();
     // get guest context
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
+    // hdebug!("ctx sp: {:#x}, scause: {:?}", ctx.x[2], scause::read().cause());
 
     // hgatp: set page table for guest physical address translation
     if riscv::register::hgatp::read().bits() != ctx.hgatp {

@@ -126,18 +126,12 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         // initialize heap
         hyp_alloc::heap_init();
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
-        // TODO: parse guest fdt
+        // parse guest fdt
         let guest_machine = hypervisor::fdt::MachineMeta::parse(GUEST_DTB.as_ptr() as usize);
         // initialize vmm
         let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);
         // create guest memory set
-        // let gpm = GuestMemorySet::<PageTableSv39>::new_guest(
-        //     &GUEST, 
-        //     GUEST_DEFAULT_SIZE,
-        //     &guest_machine
-        // );
-
         let gpm = GuestMemorySet::<PageTableSv39>::new_guest_without_load(&guest_machine);
 
         let mut host_vmm = HOST_VMM.get_mut().unwrap().lock();

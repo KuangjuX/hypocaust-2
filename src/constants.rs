@@ -28,7 +28,7 @@ pub mod layout {
     pub const GUEST_START_PA: usize = 0x9020_0000;
     pub const GUEST_START_VA: usize = 0x9020_0000;
 
-    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024 - 0x200000;
+    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024;
 
     pub const GUEST_DTB_ADDR: usize = 0x9000_0000;
 

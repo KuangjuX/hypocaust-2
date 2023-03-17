@@ -389,10 +389,11 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
     pub fn new_guest_without_load(guest_machine: &MachineMeta) -> Self {
         let mut gpm = Self::new_guest_bare();
 
+        htracking!("map guest: [{:#x}: {:#x}]", guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size);
         gpm.push(MapArea::new(
-                VirtAddr(guest_machine.physical_memory_offset), 
+                VirtAddr(guest_machine.physical_memory_offset -0x20_0000), 
                 VirtAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size), 
-                Some(PhysAddr(guest_machine.physical_memory_offset)), 
+                Some(PhysAddr(guest_machine.physical_memory_offset - 0x20_0000)), 
                 Some(PhysAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size)), 
                 MapType::Linear, 
                 MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X
@@ -469,6 +470,20 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     (plic.base_address + 0x0020_0000).into(),
                     Some(plic.base_address.into()),
                     Some((plic.base_address + 0x0020_0000).into()),
+                    MapType::Linear,
+                    MapPermission::R | MapPermission::W | MapPermission::U,
+                ), 
+                None
+            );
+        }
+
+        if let Some(pci) = &guest_machine.pci {
+            gpm.push(
+                MapArea::new(
+                    pci.base_address.into(),
+                    (pci.base_address + 0x0020_0000).into(),
+                    Some(pci.base_address.into()),
+                    Some((pci.base_address + 0x0020_0000).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
                 ), 

@@ -59,7 +59,9 @@ pub struct MachineMeta{
 
     pub clint: Option<Device>,
 
-    pub plic: Option<Device>
+    pub plic: Option<Device>,
+
+    pub pci: Option<Device>,
 }
 
 impl MachineMeta {
@@ -129,6 +131,15 @@ impl MachineMeta {
                 let size = reg.size.unwrap();
                 hdebug!("PLIC addr: {:#x}, size: {:#x}", base_addr, size);
                 meta.plic = Some(Device { base_address: base_addr, size});
+            }
+        }
+
+        for node in fdt.find_all_nodes("/soc/pci") {
+            if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
+                let base_addr = reg.starting_address as usize;
+                let size = reg.size.unwrap();
+                hdebug!("PCI addr: {:#x}, size: {:#x}", base_addr, size);
+                meta.pci = Some(Device { base_address: base_addr, size});
             }
         }
 
