@@ -89,7 +89,7 @@ pub mod pmap {
         if guest_root != 0 {
             if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
                 guest_pa = translation.guest_pa;
-                htracking!("guest pa: {:#x}", guest_pa);
+                // htracking!("guest pa: {:#x}", guest_pa);
             }else{
                 return None
             }

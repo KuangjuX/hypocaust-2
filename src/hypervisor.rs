@@ -78,18 +78,10 @@ impl MachineMeta {
             if let Some(reg) = node.reg().and_then(|mut reg| reg.next()) {
                 let paddr = reg.starting_address as usize;
                 let size = reg.size.unwrap();
-                let vaddr = paddr;
-                unsafe{
-                    let header = vaddr as *const u32;
-                    let device_id_addr = header.add(2);
-                    let device_id = core::ptr::read_volatile(device_id_addr);
-                    if device_id != 0 {
-                        hdebug!("virtio mmio addr: {:#x}, size: {:#x}", paddr, size);
-                        meta.virtio.push(
-                            Device { base_address: paddr, size }
-                        )
-                    }
-                }
+                hdebug!("virtio mmio addr: {:#x}, size: {:#x}", paddr, size);
+                meta.virtio.push(
+                    Device { base_address: paddr, size }
+                )
             }
         }
         meta.virtio.sort_unstable_by_key(|v| v.base_address);

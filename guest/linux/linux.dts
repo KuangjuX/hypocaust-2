@@ -47,7 +47,7 @@
 			status = "okay";
 			compatible = "riscv";
 			riscv,isa = "rv64imafdch_zicsr_zifencei_zba_zbb_zbc_zbs";
-			mmu-type = "riscv,sv39";
+			mmu-type = "riscv,sv48";
 
 			interrupt-controller {
 				#interrupt-cells = <0x01>;

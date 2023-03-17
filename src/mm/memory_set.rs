@@ -409,11 +409,11 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             gpm.push(
                 MapArea::new(
                     test.base_address.into(),
-                    (test.base_address + test.size).into(),
+                    (test.base_address + test.size + 0x1000).into(),
                     Some(test.base_address.into()),
-                    Some((test.base_address + test.size).into()),
+                    Some((test.base_address + test.size + 0x1000).into()),
                     MapType::Linear,
-                    MapPermission::R | MapPermission::W | MapPermission::U,
+                    MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X,
                 ), 
                 None
             );
