@@ -124,6 +124,7 @@ pub fn handle_irq<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>,
     host_vmm.irq_pending = true;
 } 
 
+/// forward exception by setting `vsepc` & `vscause`
 pub fn forward_exception(ctx: &mut TrapContext) {
     unsafe{
         asm!(
