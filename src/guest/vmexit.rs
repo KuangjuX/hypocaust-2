@@ -3,7 +3,7 @@ use core::arch::{ global_asm, asm };
 use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT, GUEST_DTB_ADDR };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
-use crate::guest::pmap::{two_stage_translation, decode_inst_at_addr};
+use crate::guest::pmap::{ two_stage_translation, decode_inst };
 use crate::page_table::PageTable;
 use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
@@ -60,7 +60,7 @@ fn privileged_inst_handler(_ctx: &mut TrapContext) -> VmmResult {
 pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut HostVmm<P, G>, ctx: &mut TrapContext) -> VmmResult {
     let addr = htval::read() << 2;
     if is_plic_access(addr) {
-        let inst = htinst::read();
+        let mut inst = htinst::read();
         if inst == 0 {
             // If htinst does not provide information about the trap,
             // we must read the instruction from guest's memory manually
@@ -72,13 +72,8 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
                 vsatp::read().bits(), 
                 gpm
             ) {
-                let (len, inst) = decode_inst_at_addr(host_inst_addr);
-                if let Some(inst) = inst {
-                    host_vmm.handle_plic_access(ctx, stval::read(), inst)?;
-                    ctx.sepc += len;         
-                }else{
-                    return Err(VmmError::DecodeInstError)
-                }
+                inst = unsafe{ core::ptr::read(host_inst_addr as *const usize) };
+                
             }else{
                 herror!("inst addr: {:#x}", inst_addr);
                 return Err(VmmError::TranslationError)
@@ -91,13 +86,19 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
             // If htinst is valid and is not a pseudo instructon make sure
             // the opcode is valid even if it was a compressed instruction,
             // but before save the real instruction size.
-            todo!()
+        }
+        let (len, inst) = decode_inst(inst);
+        if let Some(inst) = inst {
+            host_vmm.handle_plic_access(ctx, stval::read(), inst)?;
+            ctx.sepc += len;         
+        }else{
+            return Err(VmmError::DecodeInstError)
         }
         Ok(())
     }else{
-        panic!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
-        // Err(VmmError::DeviceNotFound)
-        // todo: handle device
+        herror!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
+        Err(VmmError::DeviceNotFound)
+        // todo: handle other device
     }
 }
 

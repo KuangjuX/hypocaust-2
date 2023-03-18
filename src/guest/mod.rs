@@ -130,6 +130,18 @@ pub mod pmap {
         };
         (len, riscv_decode::decode(inst).ok())
     }
+
+    /// decode risc-v instruction, return (inst len, inst)
+    pub fn decode_inst(inst: usize) -> (usize, Option<Instruction>) {
+        let i1 = inst as u16;
+        let len = riscv_decode::instruction_length(i1);
+        let inst = match len {
+            2 => i1 as u32,
+            4 => inst as u32,
+            _ => unreachable!()
+        };
+        (len, riscv_decode::decode(inst).ok())
+    }
 }
 
 
