@@ -12,7 +12,7 @@ RUN apt-get update && \
         curl \
         git \
         python3 \
-        wget
+        wget vim
 RUN apt install -y autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev \
                  gawk build-essential bison flex texinfo gperf libtool patchutils bc \
                  zlib1g-dev libexpat-dev git \

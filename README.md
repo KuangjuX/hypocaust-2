@@ -62,6 +62,58 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
 $ qemu-system-riscv64 -M virt -m 256M -nographic -bios $(BOOTLOADER)/rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
 ```
 
+**Docker Command:**
+```
+# run docker container, mount workspace in docker
+
+docker run -itd --name riscv-env --privileged -v {WORKSPACE}:/workspace riscv-gnu-toolchain /bin/bash
+
+# run docker
+docker exec -it riscv-env /bin/bash
+```
+
+**Make rootfs:**
+```
+git clone https://gitee.com/mirrors/busyboxsource.git
+cd busyboxsource
+
+# Select: Settings -> Build Options -> Build static binary
+CROSS_COMPILE=riscv64-unknown-linux-gnu- make menuconfig
+
+## Build && Install
+CROSS_COMPILE=riscv64-unknown-linux-gnu- make -j10
+CROSS_COMPILE=riscv64-unknown-linux-gnu- make install
+
+# Make minimal root file system
+cd ../
+qemu-img create rootfs.img  1g
+mkfs.ext4 rootfs.img
+
+# mount file system && copy busybox
+mkdir rootfs
+mount -o loop rootfs.img rootfs
+cd rootfs
+cp -r ../busyboxsource/_install/* .
+mkdir proc dev tec etc/init.d
+
+cd etc/init.d/
+touch rcS
+vim rcS
+
+#####
+#!/bin/sh
+mount -t proc none /proc
+mount -t sysfs none /sys
+/sbin/mdev -s
+#####
+
+chmod +x rcS
+
+umount rootfs
+
+qemu-system-riscv64 -M virt -m 256M -nographic -bios {BOOTLOADR} -kernel {KERNEL_ELF} -drive file=rootfs.img,format=raw,id=hd0  -device virtio-blk-device,drive=hd0 -append "root=/dev/vda rw console=ttyS0"
+
+```
 
 ## RoadMap
 - [x] Load guest elf image.
