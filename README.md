@@ -62,7 +62,7 @@ $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8
 $ qemu-system-riscv64 -M virt -m 256M -nographic -bios $(BOOTLOADER)/rustsbi-qemu.bin -kernel $(linux)/arch/riscv/boot/Image
 ```
 
-**Docker Command:**
+**Docker Command（MacOS/Windows）:**
 ```
 # run docker container, mount workspace in docker
 
