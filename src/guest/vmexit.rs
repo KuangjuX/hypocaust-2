@@ -221,6 +221,7 @@ pub unsafe fn hart_entry_1() -> ! {
     hart_entry_2()
 }
 
+/// first enter guest, pass dtb 
 #[naked]
 pub unsafe extern "C" fn hart_entry_2() -> ! {
     core::arch::asm!(

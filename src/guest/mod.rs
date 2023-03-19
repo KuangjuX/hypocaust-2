@@ -104,22 +104,6 @@ pub mod pmap {
         
     }
 
-    // pub fn decode_inst_at_addr<P: GuestPageTable>(guest_va: usize, gpm: &MemorySet<P>) -> (usize, Option<riscv_decode::Instruction>){
-    //     if let Some(host_va) = two_stage_translation(guest_va, gpm) {
-    //         hdebug!("host va: {:#x}", host_va);
-    //         let i1 = unsafe{ core::ptr::read(host_va as *const u16) };
-    //         let len = riscv_decode::instruction_length(i1);
-    //         let inst = match len {
-    //             2 => i1 as u32, 
-    //             4 => unsafe{ core::ptr::read(host_va as *const u32) },
-    //             _ => unreachable!()
-    //         };
-    //         (len, riscv_decode::decode(inst).ok())
-    //     }else{
-    //         (0, None)
-    //     }
-    // }
-
     pub fn decode_inst_at_addr(host_va: usize) -> (usize, Option<Instruction>) {
         let i1 = unsafe{ core::ptr::read(host_va as *const u16) };
         let len = riscv_decode::instruction_length(i1);
