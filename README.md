@@ -43,7 +43,7 @@ $ git clone https://gitee.com/mirrors/riscv-gnu-toolchain --depth=1
 $ cd riscv-gnu-toolchain
 $ git rm qemu
 $ git submodule update --init --recursive
-$ ./configure --prefix=/opt/riscv64 
+$ ./configure --prefix=/opt/riscv64 --with-arch=rv64imac --with-abi=lp64
 $ sudo make linux -j8
 $ export PATH=$PATH:/opt/riscv64/bin
 ```
