@@ -41,6 +41,11 @@ QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
 QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
 QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
+else ifeq($(PLATFORM), bare-linux)
+QEMUOPTS	= --machine virt -m 128M -bios $(BOOTLOADER) -nographic -kernel guest.bin
+QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
+QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
+QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
 endif
 
 GUEST_KERNEL_ELF := guest.elf

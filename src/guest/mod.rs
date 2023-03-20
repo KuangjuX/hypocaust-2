@@ -104,6 +104,24 @@ pub mod pmap {
         
     }
 
+    pub fn fast_two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize) -> Option<usize> {
+        let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
+        let guest_pa;
+        if guest_root != 0 {
+            if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
+                guest_pa = translation.guest_pa;
+                // htracking!("guest pa: {:#x}", guest_pa);
+            }else{
+                return None
+            }
+        }else{
+            guest_pa = guest_va;
+        }
+        Some(guest_pa)
+        
+    }
+
+
     pub fn decode_inst_at_addr(host_va: usize) -> (usize, Option<Instruction>) {
         let i1 = unsafe{ core::ptr::read(host_va as *const u16) };
         let len = riscv_decode::instruction_length(i1);

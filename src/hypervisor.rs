@@ -170,6 +170,10 @@ pub struct HostVmm<P: PageTable, G: GuestPageTable> {
     pub host_plic: Option<PlicState>,
 
     pub irq_pending: bool,
+
+    pub timer_irq: usize,
+    pub external_irq: usize,
+    pub guest_page_falut: usize,
 }
 
 pub fn add_guest_queue(guest: Guest<PageTableSv39>) {
@@ -244,7 +248,10 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
                 guests,
                 guest_id: 0,
                 host_plic,
-                irq_pending: false
+                irq_pending: false,
+                timer_irq: 0,
+                external_irq: 0,
+                guest_page_falut: 0
             }
         )
     });

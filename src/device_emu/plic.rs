@@ -53,6 +53,7 @@ impl<P: PageTable, G: GuestPageTable> HostVmm<P, G> {
                 }
             }else if index == 1 {
                 // claim/complete
+                // htracking!("claim/complete");
                 match instrution {
                     Instruction::Lw(i) => {
                         // guest read claim from plic core
@@ -73,6 +74,8 @@ impl<P: PageTable, G: GuestPageTable> HostVmm<P, G> {
                     _ => return Err(VmmError::UnexpectedInst)
                 }
             }
+        }else{
+            panic!("Invalid address: {:#x}", guest_pa);
         }
         Ok(())
     }

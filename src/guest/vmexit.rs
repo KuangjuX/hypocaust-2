@@ -4,7 +4,7 @@ use crate::constants::layout::{ TRAMPOLINE, TRAP_CONTEXT, GUEST_DTB_ADDR };
 use crate::device_emu::plic::is_plic_access;
 use crate::guest::page_table::GuestPageTable;
 use crate::guest::pmap::{ two_stage_translation, decode_inst };
-use crate::page_table::PageTable;
+use crate::page_table::{PageTable, PageTableSv39};
 use crate::hypervisor::{HOST_VMM, HostVmm};
 use crate::{ VmmError, VmmResult };
 
@@ -13,6 +13,7 @@ use riscv::register::{ stvec, sscratch, scause, sepc, stval, sie, hgatp, vsatp, 
 use riscv::register::scause::{ Trap, Exception, Interrupt };
 
 pub use super::context::TrapContext;
+use super::pmap::fast_two_stage_translation;
 use super::sbi::sbi_vs_handler;
 
 global_asm!(include_str!("trap.S"));
@@ -65,12 +66,11 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
             // If htinst does not provide information about the trap,
             // we must read the instruction from guest's memory manually
             let inst_addr = ctx.sepc;
-            let gpm = &host_vmm.guests[host_vmm.guest_id].as_ref().unwrap().gpm;
-            if let Some(host_inst_addr) = two_stage_translation(
+            // let gpm = &host_vmm.guests[host_vmm.guest_id].as_ref().unwrap().gpm;
+            if let Some(host_inst_addr) = fast_two_stage_translation::<PageTableSv39>(
                 host_vmm.guest_id, 
                 inst_addr, 
-                vsatp::read().bits(), 
-                gpm
+                vsatp::read().bits()
             ) {
                 inst = unsafe{ core::ptr::read(host_inst_addr as *const usize) };
                 
@@ -89,7 +89,8 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(host_vmm: &mut 
         }
         let (len, inst) = decode_inst(inst);
         if let Some(inst) = inst {
-            host_vmm.handle_plic_access(ctx, stval::read(), inst)?;
+            // htracking!("inst: {:?}", inst);
+            host_vmm.handle_plic_access(ctx, addr, inst)?;
             ctx.sepc += len;         
         }else{
             return Err(VmmError::DecodeInstError)
@@ -151,6 +152,10 @@ pub unsafe fn trap_handler() -> ! {
     let host_vmm = HOST_VMM.get_mut().unwrap();
     let mut host_vmm = host_vmm.lock();
     let mut err = None;
+    // if (scause.cause() != Trap::Interrupt(Interrupt::SupervisorTimer)) && 
+    // (scause.cause() != Trap::Exception(Exception::VirtualSupervisorEnvCall)) {
+    //     htracking!("cause: {:?}", scause.cause());
+    // }
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             panic!("U-mode/VU-mode env call from VS-mode?");
@@ -184,15 +189,25 @@ pub unsafe fn trap_handler() -> ! {
         if let Err(vmm_err) = guest_page_fault_handler(&mut host_vmm, ctx) {
             err = Some(vmm_err);
         }
+        host_vmm.guest_page_falut += 1;
+        if host_vmm.guest_page_falut % 1000 == 0 {
+            htracking!("guest page fault: {}, addr: {:#x}", host_vmm.guest_page_falut, htval::read() << 2);
+        }
     },
     Trap::Interrupt(Interrupt::SupervisorExternal) => {
         handle_irq(&mut host_vmm, ctx);
+        host_vmm.external_irq += 1;
+        htracking!("external irq: {}", host_vmm.external_irq);
     },
     Trap::Interrupt(Interrupt::SupervisorTimer) => {
         // set guest timer interrupt pending
         hvip::set_vstip();
         // disable timer interrupt
         sie::clear_stimer();
+        host_vmm.timer_irq += 1;
+        if host_vmm.timer_irq % 1000 == 0 {
+            htracking!("timer irq: {}", host_vmm.timer_irq);
+        }
     },
     _ => forward_exception(ctx),
     }
