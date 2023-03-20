@@ -152,10 +152,6 @@ pub unsafe fn trap_handler() -> ! {
     let host_vmm = HOST_VMM.get_mut().unwrap();
     let mut host_vmm = host_vmm.lock();
     let mut err = None;
-    // if (scause.cause() != Trap::Interrupt(Interrupt::SupervisorTimer)) && 
-    // (scause.cause() != Trap::Exception(Exception::VirtualSupervisorEnvCall)) {
-    //     htracking!("cause: {:?}", scause.cause());
-    // }
     match scause.cause() {
         Trap::Exception(Exception::UserEnvCall) => {
             panic!("U-mode/VU-mode env call from VS-mode?");
@@ -197,7 +193,7 @@ pub unsafe fn trap_handler() -> ! {
     Trap::Interrupt(Interrupt::SupervisorExternal) => {
         handle_irq(&mut host_vmm, ctx);
         host_vmm.external_irq += 1;
-        htracking!("external irq: {}", host_vmm.external_irq);
+        // htracking!("external irq: {}", host_vmm.external_irq);
     },
     Trap::Interrupt(Interrupt::SupervisorTimer) => {
         // set guest timer interrupt pending
@@ -205,9 +201,9 @@ pub unsafe fn trap_handler() -> ! {
         // disable timer interrupt
         sie::clear_stimer();
         host_vmm.timer_irq += 1;
-        if host_vmm.timer_irq % 1000 == 0 {
-            htracking!("timer irq: {}", host_vmm.timer_irq);
-        }
+        // if host_vmm.timer_irq % 1000 == 0 {
+        //     htracking!("timer irq: {}", host_vmm.timer_irq);
+        // }
     },
     _ => forward_exception(ctx),
     }

@@ -31,9 +31,9 @@
 		compatible = "qemu,platform\0simple-bus";
 	};
 
-	memory@90000000 {
+	memory@80000000 {
 		device_type = "memory";
-		reg = <0x00 0x90000000 0x00 0x8000000>;
+		reg = <0x00 0x80000000 0x00 0x8000000>;
 	};
 
 	cpus {
@@ -47,8 +47,8 @@
 			reg = <0x00>;
 			status = "okay";
 			compatible = "riscv";
-			riscv,isa = "rv64ima";
-			mmu-type = "riscv,sv39";
+			riscv,isa = "rv64imafdch_zicsr_zifencei_zba_zbb_zbc_zbs";
+			mmu-type = "riscv,sv48";
 
 			interrupt-controller {
 				#interrupt-cells = <0x01>;
