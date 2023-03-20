@@ -12,6 +12,8 @@ GDB			:= gdb-multiarch
 
 FS_IMG 		:= fs.img
 
+ROOTFS		:= /Users/kuangjux/software/kernel_workspace/rootfs.img
+
 ifeq ($(PLATFORM), rCore-Tutorial-v3)
 QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
@@ -36,6 +38,9 @@ QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 else ifeq ($(PLATFORM), u-boot)
 QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
+QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
+QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
 endif
 
 GUEST_KERNEL_ELF := guest.elf
