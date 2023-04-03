@@ -128,10 +128,11 @@ qemu-system-riscv64 -M virt -m 256M -nographic -bios {BOOTLOADR} -kernel {KERNEL
 - [x] Configure hypervisor and guest memory addresses and peripheral space mapping by device tree.
 - [x] Emulate PLIC && Forward interrupts
 - [x] Expose and/or emulate peripherals
-- [ ] IOMMU enabled
 - [x] run rCore-Tutorial-v3
 - [x] run RT-Thread
-- [ ] run Linux
+- [x] run Linux
+- [ ] IOMMU enabled
+- [ ] AIA support
 - [ ] multicore supported
 - [ ] multiguest supported
 

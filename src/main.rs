@@ -3,8 +3,12 @@
 #![deny(warnings)]
 #![allow(non_upper_case_globals, dead_code)]
 #![feature(
-    panic_info_message, alloc_error_handler, core_intrinsics, naked_functions,
-    asm_const, stdsimd
+    panic_info_message,
+    alloc_error_handler,
+    core_intrinsics,
+    naked_functions,
+    asm_const,
+    stdsimd
 )]
 
 #[macro_use]
@@ -17,52 +21,40 @@ mod board;
 
 #[macro_use]
 mod console;
-mod sbi;
-mod lang_items;
-mod detect;
-mod page_table;
 mod constants;
-mod hyp_alloc;
-mod sync;
-mod mm;
-mod guest;
-mod hypervisor;
+mod detect;
 mod device_emu;
-mod error;
 mod drivers;
+mod error;
+mod guest;
+mod hyp_alloc;
+mod hypervisor;
+mod lang_items;
+mod mm;
+mod page_table;
+mod sbi;
+mod sync;
 
-
-use crate::constants::PAGE_SIZE;
-use crate::mm::{HostMemorySet, GuestMemorySet};
 use crate::constants::layout::{GUEST_DEFAULT_SIZE, GUEST_START_PA};
-use crate::page_table::PageTableSv39;
-use crate::guest::Guest;
+use crate::constants::PAGE_SIZE;
 use crate::guest::vmexit::hart_entry_1;
-use crate::hypervisor::{ init_vmm, HOST_VMM, add_guest_queue };
+use crate::guest::Guest;
+use crate::hypervisor::{add_guest_queue, init_vmm, HOST_VMM};
+use crate::mm::{GuestMemorySet, HostMemorySet};
+use crate::page_table::PageTableSv39;
 
-pub use error::{ VmmError, VmmResult };
+pub use error::{VmmError, VmmResult};
 
 #[link_section = ".dtb"]
-pub static GUEST_DTB: [u8;include_bytes!("../guest.dtb").len()] = 
-*include_bytes!("../guest.dtb");
-
-// #[link_section = ".initrd"]
-// #[cfg(feature = "embed_guest_kernel")]
-// static GUEST: [u8;include_bytes!("../guest.elf").len()] = 
-//  *include_bytes!("../guest.elf");
-
-//  #[cfg(not(feature = "embed_guest_kernel"))]
-//  static GUEST: [u8; 0] = [];
+pub static GUEST_DTB: [u8; include_bytes!("../guest.dtb").len()] = *include_bytes!("../guest.dtb");
 
 #[link_section = ".initrd"]
 #[cfg(feature = "embed_guest_kernel")]
-static GUEST: [u8;include_bytes!("../guest.bin").len()] = 
- *include_bytes!("../guest.bin");
+static GUEST: [u8; include_bytes!("../guest.bin").len()] = *include_bytes!("../guest.bin");
 
 #[link_section = ".initrd"]
 #[cfg(not(feature = "embed_guest_kernel"))]
 static GUEST: [u8; 0] = [];
-
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
@@ -103,14 +95,15 @@ fn clear_bss() {
     }
 }
 
-
-
-
 #[no_mangle]
 unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         clear_bss();
-        hdebug!("guest entry: {:#x}, guest size: {:#x}", GUEST.as_ptr() as usize, GUEST.len());
+        hdebug!(
+            "guest entry: {:#x}, guest size: {:#x}",
+            GUEST.as_ptr() as usize,
+            GUEST.len()
+        );
         hdebug!("guest dtb addr: {:#x}", GUEST_DTB.as_ptr() as usize);
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
@@ -150,7 +143,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         add_guest_queue(guest);
         hdebug!("Jump to guest......");
         hart_entry_1()
-    }else{
+    } else {
         unreachable!()
     }
 }

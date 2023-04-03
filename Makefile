@@ -29,7 +29,7 @@ else ifeq ($(PLATFORM), rt-thread)
 QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
 QEMUOPTS	+=-device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
 QEMUOPTS    +=-drive if=none,file=guest/rtthread/sd.bin,format=raw,id=blk0 -device virtio-blk-device,drive=blk0,bus=virtio-mmio-bus.0
-QEMUOPTS 	+=-netdev user,id=tap0 -device virtio-net-device,netdev=tap0,bus=virtio-mmio-bus.1 
+QEMUOPTS 	+=-netdev user,id=tap0 -device virtio-net-device,netdev=tap0,bus=virtio-mmio-bus.1
 QEMUOPTS 	+=-device virtio-serial-device -chardev socket,host=127.0.0.1,port=4321,server=on,wait=off,telnet=on,id=console0 -device virtserialport,chardev=console0
 # QEMUOPTS    += -machine dumpdtb=rtthread.dtb
 else ifeq ($(PLATFORM), linux)
@@ -73,17 +73,17 @@ build: $(GUEST)
 	cargo build $(GUEST_KERNEL_FEATURE)
 	rm src/linker.ld
 
-$(KERNEL_BIN): build 
+$(KERNEL_BIN): build
 	$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
 
-	
+
 
 qemu: $(KERNEL_BIN)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
 	rm $(FS_IMG)
-	cargo clean 
+	cargo clean
 	rm $(GUEST)
 	cd guest && cargo clean
 
@@ -100,6 +100,5 @@ debug: $(KERNEL_BIN)
 		tmux -2 attach-session -d
 
 asm:
-	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust-2 > hyper.S 
-	riscv64-unknown-elf-objdump -d guest.elf > guest.S 
-
+	riscv64-unknown-elf-objdump -d target/riscv64gc-unknown-none-elf/debug/hypocaust-2 > hyper.S
+	riscv64-unknown-elf-objdump -d guest.elf > guest.S
