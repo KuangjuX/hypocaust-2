@@ -33,7 +33,7 @@ QEMUOPTS 	+=-netdev user,id=tap0 -device virtio-net-device,netdev=tap0,bus=virti
 QEMUOPTS 	+=-device virtio-serial-device -chardev socket,host=127.0.0.1,port=4321,server=on,wait=off,telnet=on,id=console0 -device virtserialport,chardev=console0
 # QEMUOPTS    += -machine dumpdtb=rtthread.dtb
 else ifeq ($(PLATFORM), linux)
-QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
+QEMUOPTS	= --machine virt -m 3G -bios default -nographic
 QEMUOPTS	+=-kernel $(KERNEL_BIN)
 QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
 QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
@@ -45,12 +45,15 @@ QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
 QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
 QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
 # QEMUOPTS 	+=-machine dumpdtb=linux.dtb
-else ifeq($(PLATFORM), bare-linux)
-QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
-QEMUOPTS	+=-kernel guest.bin
-QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
-QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
-QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
+# else ifeq($(PLATFORM), bare-linux)
+# QEMUOPTS	= --machine virt -m 3G -bios $(BOOTLOADER) -nographic
+# QEMUOPTS	+=-kernel guest.bin
+# QEMUOPTS	+=-drive file=$(ROOTFS),format=raw,id=hd0
+# QEMUOPTS 	+=-device virtio-blk-device,drive=hd0
+# QEMUOPTS	+=-append "root=/dev/vda rw console=ttyS0"
+else ifeq($(PLATFORM), hyperbench)
+QEMUOPTS    = --machine virt -m 3G -bios $(BOOTLOADER) -nographic 
+QEMUOPTS 	+=-kernel $(KERNEL_BIN)
 endif
 
 GUEST_KERNEL_ELF := guest.elf

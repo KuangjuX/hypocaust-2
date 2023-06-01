@@ -1,20 +1,20 @@
 //! Implementation of [`MapArea`] and [`MemorySet`].
 
+use super::MemorySet;
+use crate::constants::{
+    layout::{GUEST_START_PA, GUEST_START_VA, MEMORY_END, TRAMPOLINE, TRAP_CONTEXT},
+    PAGE_SIZE,
+};
 use crate::guest::page_table::GuestPageTable;
-use crate::hyp_alloc::{ FrameTracker, frame_alloc };
+use crate::hyp_alloc::{frame_alloc, FrameTracker};
+use crate::hypervisor::{fdt::MachineMeta, HOST_VMM};
+use crate::page_table::{PPNRange, StepByOne, VPNRange};
 use crate::page_table::{PTEFlags, PageTable};
 use crate::page_table::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum};
-use crate::page_table::{StepByOne, VPNRange, PPNRange};
-use crate::constants::{
-    PAGE_SIZE,
-    layout::{ TRAMPOLINE, TRAP_CONTEXT, MEMORY_END, GUEST_START_PA, GUEST_START_VA }
-};
-use crate::hypervisor::{ fdt::MachineMeta, HOST_VMM };
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
-use super::MemorySet;
-use core::marker::PhantomData;
 use core::arch::asm;
+use core::marker::PhantomData;
 
 extern "C" {
     fn stext();
@@ -30,9 +30,6 @@ extern "C" {
     fn sinitrd();
     fn einitrd();
 }
-
-
-
 
 /// memory set structure, controls virtual-memory space
 pub struct HostMemorySet<P: PageTable> {
@@ -70,7 +67,7 @@ impl<P: PageTable> HostMemorySet<P> {
                 None,
                 None,
                 MapType::Framed,
-                MapPermission::R | MapPermission::W
+                MapPermission::R | MapPermission::W,
             ),
             None,
         );
@@ -145,8 +142,8 @@ impl<P: PageTable> HostMemorySet<P> {
                     Some((test.base_address + test.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -173,8 +170,8 @@ impl<P: PageTable> HostMemorySet<P> {
                     Some((plic.base_address + plic.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W,
-                ), 
-                None
+                ),
+                None,
             );
         }
         hpm
@@ -185,9 +182,9 @@ impl<P: PageTable> HostMemorySet<P> {
         let satp = self.page_table.token();
         unsafe {
             asm!(
-                "csrw satp, {hgatp}",
+                "csrw satp, {satp}",
                 "sfence.vma",
-                hgatp = in(reg) satp
+                satp = in(reg) satp
             );
         }
     }
@@ -195,14 +192,14 @@ impl<P: PageTable> HostMemorySet<P> {
     pub fn map_guest(&mut self, start_pa: usize, gpm_size: usize) {
         self.push(
             MapArea::new(
-                start_pa.into(), 
-                (start_pa + gpm_size).into(), 
-                Some(start_pa.into()), 
-                Some((start_pa + gpm_size).into()), 
-                MapType::Linear, 
-                MapPermission::R | MapPermission::W
-            ), 
-            None
+                start_pa.into(),
+                (start_pa + gpm_size).into(),
+                Some(start_pa.into()),
+                Some((start_pa + gpm_size).into()),
+                MapType::Linear,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
         );
     }
 
@@ -214,20 +211,18 @@ impl<P: PageTable> HostMemorySet<P> {
             let start_pa: PhysAddr = ppn_range.get_start().into();
             let end_pa: PhysAddr = ppn_range.get_end().into();
             let start_va: usize = start_pa.into();
-            let end_va: usize= end_pa.into();
+            let end_va: usize = end_pa.into();
             let new_area = MapArea::new(
-                start_va.into(), 
-                end_va.into(), 
+                start_va.into(),
+                end_va.into(),
                 Some(start_pa),
-                Some(end_pa), 
-                area.map_type, 
-                area.map_perm
+                Some(end_pa),
+                area.map_type,
+                area.map_perm,
             );
             self.push(new_area, None);
         }
     }
-
-
 }
 
 impl<G: GuestPageTable> GuestMemorySet<G> {
@@ -236,15 +231,11 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
     pub fn new_guest_bare() -> Self {
         Self {
             page_table: GuestPageTable::new_guest(),
-            areas: Vec::new()
+            areas: Vec::new(),
         }
     }
 
-    pub fn new_guest(
-        guest_data: &[u8], 
-        gpm_size: usize, 
-        guest_machine: &MachineMeta
-    ) -> Self {
+    pub fn new_guest(guest_data: &[u8], gpm_size: usize, guest_machine: &MachineMeta) -> Self {
         let mut gpm = Self::new_guest_bare();
         let elf = xmas_elf::ElfFile::new(guest_data).unwrap();
         let elf_header = elf.header;
@@ -271,45 +262,61 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     map_perm |= MapPermission::X;
                 }
                 // 将内存拷贝到对应的物理内存上
-                unsafe{
-                    core::ptr::copy(guest_data.as_ptr().add(ph.offset() as usize), paddr, ph.file_size() as usize);
+                unsafe {
+                    core::ptr::copy(
+                        guest_data.as_ptr().add(ph.offset() as usize),
+                        paddr,
+                        ph.file_size() as usize,
+                    );
                     let page_align_size = ((ph.mem_size() as usize + PAGE_SIZE - 1) >> 12) << 12;
                     paddr = paddr.add(page_align_size);
                 }
-                
+
                 let map_area = MapArea::new(
-                    start_va, 
-                    end_va, 
+                    start_va,
+                    end_va,
                     Some(PhysAddr(last_paddr as usize)),
                     Some(PhysAddr(paddr as usize)),
-                    MapType::Linear, 
-                    map_perm
+                    MapType::Linear,
+                    map_perm,
                 );
-                hdebug!("va: [{:#x}: {:#x}], pa: [{:#x}: {:#x}]", start_va.0, end_va.0, last_paddr as usize, paddr as usize);
+                hdebug!(
+                    "va: [{:#x}: {:#x}], pa: [{:#x}: {:#x}]",
+                    start_va.0,
+                    end_va.0,
+                    last_paddr as usize,
+                    paddr as usize
+                );
                 last_paddr = paddr;
                 gpm.push(map_area, None);
             }
-            
         }
         let offset = paddr as usize - GUEST_START_PA;
 
         let guest_end_pa = GUEST_START_PA + gpm_size;
-        let guest_end_va = GUEST_START_VA + gpm_size; 
+        let guest_end_va = GUEST_START_VA + gpm_size;
         // 映射其他物理内存
-        gpm.push(MapArea::new(
-                VirtAddr(offset + GUEST_START_VA), 
-                VirtAddr(guest_end_va), 
-                Some(PhysAddr(paddr as usize)), 
-                Some(PhysAddr(guest_end_pa)), 
-                MapType::Linear, 
-                MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X
+        gpm.push(
+            MapArea::new(
+                VirtAddr(offset + GUEST_START_VA),
+                VirtAddr(guest_end_va),
+                Some(PhysAddr(paddr as usize)),
+                Some(PhysAddr(guest_end_pa)),
+                MapType::Linear,
+                MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X,
             ),
-            None
+            None,
         );
-        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa);
+        hdebug!(
+            "guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})",
+            GUEST_START_VA,
+            guest_end_va,
+            GUEST_START_PA,
+            guest_end_pa
+        );
 
         gpm.map_trampoline();
-        
+
         // map qemu test
         if let Some(test) = &guest_machine.test_finisher_address {
             gpm.push(
@@ -320,8 +327,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((test.base_address + test.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -340,7 +347,6 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             )
         }
 
-
         if let Some(uart) = &guest_machine.uart {
             gpm.push(
                 MapArea::new(
@@ -350,8 +356,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((uart.base_address + uart.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -364,8 +370,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((clint.base_address + clint.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -378,8 +384,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((plic.base_address).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -389,21 +395,34 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
     pub fn new_guest_without_load(guest_machine: &MachineMeta) -> Self {
         let mut gpm = Self::new_guest_bare();
 
-        htracking!("map guest: [{:#x}: {:#x}]", guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size);
-        gpm.push(MapArea::new(
-                VirtAddr(guest_machine.physical_memory_offset -0x20_0000), 
-                VirtAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size), 
-                Some(PhysAddr(guest_machine.physical_memory_offset - 0x20_0000)), 
-                Some(PhysAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size)), 
-                MapType::Linear, 
-                MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X
-            ),
-            None
+        htracking!(
+            "map guest: [{:#x}: {:#x}]",
+            guest_machine.physical_memory_offset,
+            guest_machine.physical_memory_offset + guest_machine.physical_memory_size
         );
-        hdebug!("guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})", guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size, guest_machine.physical_memory_offset, guest_machine.physical_memory_offset + guest_machine.physical_memory_size);
+        gpm.push(
+            MapArea::new(
+                VirtAddr(guest_machine.physical_memory_offset - 0x20_0000),
+                VirtAddr(guest_machine.physical_memory_offset + guest_machine.physical_memory_size),
+                Some(PhysAddr(guest_machine.physical_memory_offset - 0x20_0000)),
+                Some(PhysAddr(
+                    guest_machine.physical_memory_offset + guest_machine.physical_memory_size,
+                )),
+                MapType::Linear,
+                MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X,
+            ),
+            None,
+        );
+        hdebug!(
+            "guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})",
+            guest_machine.physical_memory_offset,
+            guest_machine.physical_memory_offset + guest_machine.physical_memory_size,
+            guest_machine.physical_memory_offset,
+            guest_machine.physical_memory_offset + guest_machine.physical_memory_size
+        );
 
         gpm.map_trampoline();
-        
+
         // map qemu test
         if let Some(test) = &guest_machine.test_finisher_address {
             gpm.push(
@@ -414,8 +433,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((test.base_address + test.size + 0x1000).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U | MapPermission::X,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -434,7 +453,6 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             )
         }
 
-
         if let Some(uart) = &guest_machine.uart {
             gpm.push(
                 MapArea::new(
@@ -444,8 +462,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((uart.base_address + uart.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -458,8 +476,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((clint.base_address + clint.size).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -472,8 +490,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((plic.base_address + 0x0020_0000).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -486,8 +504,8 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     Some((pci.base_address + 0x0020_0000).into()),
                     MapType::Linear,
                     MapPermission::R | MapPermission::W | MapPermission::U,
-                ), 
-                None
+                ),
+                None,
             );
         }
 
@@ -503,10 +521,13 @@ pub struct MapArea<P: PageTable> {
     pub data_frames: BTreeMap<VirtPageNum, FrameTracker>,
     pub map_type: MapType,
     pub map_perm: MapPermission,
-    _marker: PhantomData<P>
+    _marker: PhantomData<P>,
 }
 
-impl<P> MapArea<P> where P: PageTable {
+impl<P> MapArea<P>
+where
+    P: PageTable,
+{
     pub fn new(
         start_va: VirtAddr,
         end_va: VirtAddr,
@@ -526,16 +547,16 @@ impl<P> MapArea<P> where P: PageTable {
                 data_frames: BTreeMap::new(),
                 map_type,
                 map_perm,
-                _marker: PhantomData
-            }
+                _marker: PhantomData,
+            };
         }
-        Self{
+        Self {
             vpn_range: VPNRange::new(start_vpn, end_vpn),
             ppn_range: None,
             data_frames: BTreeMap::new(),
             map_type,
             map_perm,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
     pub fn map_one(&mut self, page_table: &mut P, vpn: VirtPageNum, ppn_: Option<PhysPageNum>) {
@@ -544,7 +565,7 @@ impl<P> MapArea<P> where P: PageTable {
             // 线性映射
             MapType::Linear => {
                 ppn = ppn_.unwrap();
-            },
+            }
             MapType::Framed => {
                 let frame = frame_alloc().unwrap();
                 ppn = frame.ppn;
@@ -579,7 +600,7 @@ impl<P> MapArea<P> where P: PageTable {
                     break;
                 }
             }
-        }else{
+        } else {
             for vpn in self.vpn_range {
                 self.map_one(page_table, vpn, None)
             }
@@ -613,14 +634,13 @@ impl<P> MapArea<P> where P: PageTable {
             current_vpn.step();
         }
     }
-
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 /// map type for memory set: identical or framed
 pub enum MapType {
     Framed,
-    Linear
+    Linear,
 }
 
 bitflags! {
@@ -635,7 +655,7 @@ bitflags! {
 
 #[allow(unused)]
 pub fn remap_test() {
-    let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+    let host_vmm = unsafe { HOST_VMM.get().unwrap().lock() };
     let kernel_space = &host_vmm.hpm;
     let mid_text: VirtAddr = ((stext as usize + etext as usize) / 2).into();
     let mid_rodata: VirtAddr = ((srodata as usize + erodata as usize) / 2).into();
@@ -656,7 +676,7 @@ pub fn remap_test() {
         .translate(mid_data.floor())
         .unwrap()
         .executable(),);
-    unsafe{ core::ptr::read(TRAMPOLINE as *const usize) };
+    unsafe { core::ptr::read(TRAMPOLINE as *const usize) };
     // 测试 guest ketnel
     hdebug!("remap test passed!");
     drop(host_vmm);
