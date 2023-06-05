@@ -24,12 +24,12 @@ pub mod layout {
     /// 上下文切换数据存储虚拟地址
     pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
 
-    pub const GUEST_START_PA: usize = 0x9020_0000;
-    pub const GUEST_START_VA: usize = 0x9020_0000;
+    pub const GUEST_START_PA: usize = crate::board::GUEST_BIN_ADDR;
+    pub const GUEST_START_VA: usize = crate::board::GUEST_BIN_ADDR;
 
-    pub const GUEST_DEFAULT_SIZE: usize = 128 * 1024 * 1024;
+    pub const GUEST_DEFAULT_SIZE: usize = crate::board::GUEST_BIN_SIZE;
 
-    pub const GUEST_DTB_ADDR: usize = 0x9000_0000;
+    pub const GUEST_DTB_ADDR: usize = crate::board::GUEST_DTB_ADDR;
 
     pub use crate::board::MMIO;
 }

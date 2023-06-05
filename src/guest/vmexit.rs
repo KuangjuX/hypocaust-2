@@ -92,7 +92,6 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(
         }
         let (len, inst) = decode_inst(inst);
         if let Some(inst) = inst {
-            // htracking!("inst: {:?}", inst);
             host_vmm.handle_plic_access(ctx, addr, inst)?;
             ctx.sepc += len;
         } else {
@@ -111,8 +110,6 @@ pub fn handle_irq<P: PageTable, G: GuestPageTable>(
     host_vmm: &mut HostVmm<P, G>,
     _ctx: &mut TrapContext,
 ) {
-    // TODO: handle other irq
-    // check external interrupt && handle
     let host_plic = host_vmm.host_plic.as_mut().unwrap();
     // get current guest context id
     let context_id = 2 * host_vmm.guest_id + 1;
@@ -296,7 +293,6 @@ pub unsafe fn switch_to_guest() -> ! {
     set_user_trap_entry();
     // get guest context
     let ctx = (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap();
-    // hdebug!("ctx sp: {:#x}, scause: {:?}", ctx.x[2], scause::read().cause());
 
     // hgatp: set page table for guest physical address translation
     if riscv::register::hgatp::read().bits() != ctx.hgatp {

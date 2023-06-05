@@ -258,18 +258,33 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
 
         use crate::board::MMIO;
         for (start, size) in MMIO.iter() {
-            gpm.push(
-                MapArea::new(
-                    VirtAddr(*start),
-                    VirtAddr(start + size),
-                    Some(PhysAddr(*start)),
-                    Some(PhysAddr(start + size)),
-                    MapType::Linear,
-                    MapPermission::R | MapPermission::W | MapPermission::U,
-                ),
-                None,
-            );
-            info!("map mmio: [{:#x}: {:#x}]", *start, *start + size);
+            if *start == 0x0c00_0000 {
+                gpm.push(
+                    MapArea::new(
+                        VirtAddr(*start),
+                        VirtAddr(*start + 0x0020_0000),
+                        Some(PhysAddr(*start)),
+                        Some(PhysAddr(*start + 0x0020_0000)),
+                        MapType::Linear,
+                        MapPermission::R | MapPermission::W | MapPermission::U,
+                    ),
+                    None,
+                );
+            } else {
+                gpm.push(
+                    MapArea::new(
+                        VirtAddr(*start),
+                        VirtAddr(start + size),
+                        Some(PhysAddr(*start)),
+                        Some(PhysAddr(start + size)),
+                        MapType::Linear,
+                        MapPermission::R | MapPermission::W | MapPermission::U,
+                    ),
+                    None,
+                );
+            }
+
+            info!("map mmio: [{:#x}: {:#x}]", *start, start + size);
         }
         gpm
     }

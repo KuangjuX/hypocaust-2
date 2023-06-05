@@ -45,7 +45,6 @@ pub fn sbi_vs_handler(ctx: &mut TrapContext) -> VmmResult {
         error: SBI_SUCCESS,
         value: 0,
     };
-
     match ext_id {
         SBI_EXTID_BASE => sbi_ret = sbi_base_handler(fid, ctx),
         SBI_EXTID_TIME => sbi_ret = sbi_time_handler(ctx.x[GprIndex::A0 as usize], fid),
