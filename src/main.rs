@@ -13,6 +13,8 @@
 
 #[macro_use]
 extern crate bitflags;
+#[macro_use]
+extern crate log;
 
 extern crate alloc;
 
@@ -44,17 +46,6 @@ use crate::mm::{GuestMemorySet, HostMemorySet};
 use crate::page_table::PageTableSv39;
 
 pub use error::{VmmError, VmmResult};
-
-// #[link_section = ".dtb"]
-// pub static GUEST_DTB: [u8; include_bytes!("../guest.dtb").len()] = *include_bytes!("../guest.dtb");
-
-// #[link_section = ".initrd"]
-// #[cfg(feature = "embed_guest_kernel")]
-// static GUEST: [u8; include_bytes!("../guest.bin").len()] = *include_bytes!("../guest.bin");
-
-// #[link_section = ".initrd"]
-// #[cfg(not(feature = "embed_guest_kernel"))]
-// static GUEST: [u8; 0] = [];
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
@@ -99,8 +90,9 @@ fn clear_bss() {
 unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         clear_bss();
-        hdebug!("Hello Hypocaust-2!");
-        hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
+        console::init();
+        info!("Hello Hypocaust-2!");
+        info!("hart id: {}, dtb: {:#x}", hart_id, dtb);
         // detect h extension
         if sbi_rt::probe_extension(sbi_rt::Hsm).is_unavailable() {
             panic!("no HSM extension exist on current SBI environment");
@@ -108,11 +100,11 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         if !detect::detect_h_extension() {
             panic!("no RISC-V hypervisor H extension on current environment")
         }
-        hdebug!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
+        info!("Hypocaust-2 > running with hardware RISC-V H ISA acceration!");
 
         // initialize heap
         hyp_alloc::heap_init();
-        hdebug!("host dtb: {:#x}", dtb);
+        info!("host dtb: {:#x}", dtb);
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // parse guest fdt
         let guest_machine = hypervisor::fdt::MachineMeta::parse(0x9000_0000);
@@ -134,7 +126,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         // create guest struct
         let guest = Guest::new(0, gpm, guest_machine);
         add_guest_queue(guest);
-        hdebug!("Jump to guest......");
+        info!("Start to run guest......");
         hart_entry_1()
     } else {
         unreachable!()

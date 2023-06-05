@@ -1,18 +1,17 @@
-use crate::constants::layout::{TRAP_CONTEXT, GUEST_START_VA};
+use crate::constants::layout::{GUEST_START_VA, TRAP_CONTEXT};
 use crate::hypervisor::fdt::MachineMeta;
-use crate::mm::{ GuestMemorySet, MemorySet };
-use crate::hypervisor::{ stack::hstack_alloc};
-use vmexit::{TrapContext, trap_handler};
+use crate::hypervisor::stack::hstack_alloc;
+use crate::mm::{GuestMemorySet, MemorySet};
+use vmexit::{trap_handler, TrapContext};
 
 use self::page_table::GuestPageTable;
 use self::vcpu::VCpu;
 pub use sbi::SbiRet;
 
 mod context;
-mod vcpu;
 mod sbi;
+mod vcpu;
 pub mod vmexit;
-
 
 pub struct Guest<G: GuestPageTable> {
     pub guest_machine: MachineMeta,
@@ -21,7 +20,7 @@ pub struct Guest<G: GuestPageTable> {
     /// guest id
     pub guest_id: usize,
     /// virtual cpu status
-    pub vcpu: VCpu
+    pub vcpu: VCpu,
 }
 
 impl<G: GuestPageTable> Guest<G> {
@@ -30,7 +29,8 @@ impl<G: GuestPageTable> Guest<G> {
         let hstack = hstack_alloc(guest_id);
         let hstack_top = hstack.get_top();
         // 获取 trap context
-        let trap_ctx: &mut TrapContext = unsafe{ (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
+        let trap_ctx: &mut TrapContext =
+            unsafe { (TRAP_CONTEXT as *mut TrapContext).as_mut().unwrap() };
         // 初始化 trap context 的环境
         // 包括入口地址/栈寄存器/satp/内核栈寄存器/trap处理地址
         *trap_ctx = TrapContext::initialize_context(
@@ -38,7 +38,7 @@ impl<G: GuestPageTable> Guest<G> {
             0,
             gpm.token(),
             hstack_top,
-            trap_handler as usize
+            trap_handler as usize,
         );
         Self {
             guest_id,
@@ -48,12 +48,10 @@ impl<G: GuestPageTable> Guest<G> {
         }
     }
 
-
     pub fn run(&mut self) {
         todo!()
     }
 }
-
 
 pub mod page_table {
     use crate::page_table::PageTable;
@@ -66,8 +64,11 @@ pub mod page_table {
 pub mod pmap {
     use riscv_decode::Instruction;
 
-    use crate::{mm::{MemorySet, GuestMemorySet}, page_table::translate_guest_va};
     use super::page_table::GuestPageTable;
+    use crate::{
+        mm::{GuestMemorySet, MemorySet},
+        page_table::translate_guest_va,
+    };
     // use riscv_decode;
 
     #[allow(unused)]
@@ -83,52 +84,54 @@ pub mod pmap {
         pa - guest_id * segment_layout::GUEST_SEGMENT_SIZE
     }
 
-    pub fn two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize, gpm: &GuestMemorySet<G>) -> Option<usize> {
+    pub fn two_stage_translation<G: GuestPageTable>(
+        guest_id: usize,
+        guest_va: usize,
+        vsatp: usize,
+        gpm: &GuestMemorySet<G>,
+    ) -> Option<usize> {
         let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
         let guest_pa;
         if guest_root != 0 {
             if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
                 guest_pa = translation.guest_pa;
                 // htracking!("guest pa: {:#x}", guest_pa);
-            }else{
-                return None
+            } else {
+                return None;
             }
-        }else{
+        } else {
             guest_pa = guest_va;
         }
-        if let Some(host_va) = gpm.translate_va(guest_pa) {
-            Some(host_va)
-        }else{
-            return None
-        }
-        
+        gpm.translate_va(guest_pa)
     }
 
-    pub fn fast_two_stage_translation<G: GuestPageTable>(guest_id: usize, guest_va: usize, vsatp: usize) -> Option<usize> {
+    pub fn fast_two_stage_translation<G: GuestPageTable>(
+        guest_id: usize,
+        guest_va: usize,
+        vsatp: usize,
+    ) -> Option<usize> {
         let guest_root = (vsatp & 0x3ff_ffff_ffff) << 12;
         let guest_pa;
         if guest_root != 0 {
             if let Some(translation) = translate_guest_va::<G>(guest_id, guest_root, guest_va) {
                 guest_pa = translation.guest_pa;
                 // htracking!("guest pa: {:#x}", guest_pa);
-            }else{
-                return None
+            } else {
+                return None;
             }
-        }else{
+        } else {
             guest_pa = guest_va;
         }
         Some(guest_pa)
-        
     }
 
-
     pub fn decode_inst_at_addr(host_va: usize) -> (usize, Option<Instruction>) {
-        let i1 = unsafe{ core::ptr::read(host_va as *const u16) };
+        let i1 = unsafe { core::ptr::read(host_va as *const u16) };
         let len = riscv_decode::instruction_length(i1);
         let inst = match len {
-            2 => i1 as u32, 
-            4 => unsafe{ core::ptr::read(host_va as *const u32) },
-            _ => unreachable!()
+            2 => i1 as u32,
+            4 => unsafe { core::ptr::read(host_va as *const u32) },
+            _ => unreachable!(),
         };
         (len, riscv_decode::decode(inst).ok())
     }
@@ -140,13 +143,8 @@ pub mod pmap {
         let inst = match len {
             2 => i1 as u32,
             4 => inst as u32,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
         (len, riscv_decode::decode(inst).ok())
     }
 }
-
-
-
-
-

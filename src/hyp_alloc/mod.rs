@@ -7,5 +7,5 @@ pub use frame_allocator::{frame_alloc, frame_dealloc, FrameTracker};
 pub fn heap_init() {
     heap_allocator::init_heap();
     frame_allocator::init_frame_allocator();
-    hdebug!("Heap initialize finished!");
+    info!("Heap initialize finished!");
 }

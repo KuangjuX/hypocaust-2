@@ -4,7 +4,8 @@ KERNEL_ELF	:= target/$(TARGET)/$(MODE)/hypocaust-2
 KERNEL_BIN	:= target/$(TARGET)/$(MODE)/hypocaust-2.bin
 CPUS		:= 1
 
-PLATFORM	?= rt-thread
+PLATFORM	?= linux
+LOG			?= info
 
 BOARD 		:= qemu
 
@@ -59,7 +60,7 @@ KERNEL_ENTRY_PA := 0x80200000
 
 build: $(GUEST)
 	cp src/linker-qemu.ld src/linker.ld
-	cargo build $(GUEST_KERNEL_FEATURE)
+	LOG=$(LOG) cargo build $(GUEST_KERNEL_FEATURE)
 	rm src/linker.ld
 
 $(KERNEL_BIN): build
@@ -71,10 +72,7 @@ qemu: $(KERNEL_BIN)
 	$(QEMU) $(QEMUOPTS)
 
 clean:
-	rm $(FS_IMG)
 	cargo clean
-	rm $(GUEST)
-	cd guest && cargo clean
 
 qemu-gdb: $(KERNEL_ELF)
 	$(QEMU) $(QEMUOPTS) -S -gdb tcp::1234

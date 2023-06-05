@@ -1,21 +1,21 @@
 mod memory_set;
 
-pub use memory_set::{HostMemorySet, GuestMemorySet, MapArea, remap_test, MapPermission};
+pub use memory_set::{remap_test, GuestMemorySet, HostMemorySet, MapArea, MapPermission};
 
-use memory_set::MapType;
-use crate::guest::page_table::GuestPageTable;
-use crate::page_table::{VirtAddr, PageTable, VirtPageNum, PageTableEntry, PhysAddr, PTEFlags};
 use crate::constants::layout::TRAMPOLINE;
+use crate::guest::page_table::GuestPageTable;
 use crate::hypervisor::HOST_VMM;
+use crate::page_table::{PTEFlags, PageTable, PageTableEntry, PhysAddr, VirtAddr, VirtPageNum};
+use memory_set::MapType;
 
 pub fn enable_paging() {
-    let host_vmm = unsafe{ HOST_VMM.get().unwrap().lock() };
+    let host_vmm = unsafe { HOST_VMM.get().unwrap().lock() };
     host_vmm.hpm.activate();
     drop(host_vmm);
-    hdebug!("Hypervisor enable paging!");
+    info!("Hypervisor enable paging!");
 }
 
-pub trait MemorySet<P: PageTable>{
+pub trait MemorySet<P: PageTable> {
     fn token(&self) -> usize;
     fn insert_framed_area(
         &mut self,
@@ -23,11 +23,7 @@ pub trait MemorySet<P: PageTable>{
         end_va: VirtAddr,
         permission: MapPermission,
     );
-    fn push(
-        &mut self, 
-        map_area: MapArea<P>, 
-        data: Option<&[u8]>
-    );
+    fn push(&mut self, map_area: MapArea<P>, data: Option<&[u8]>);
 
     fn map_trampoline(&mut self);
     fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry>;
@@ -47,7 +43,7 @@ impl<P: PageTable> MemorySet<P> for HostMemorySet<P> {
         permission: MapPermission,
     ) {
         self.push(
-            MapArea::new(start_va, end_va,  None, None, MapType::Framed, permission),
+            MapArea::new(start_va, end_va, None, None, MapType::Framed, permission),
             None,
         );
     }
@@ -73,7 +69,6 @@ impl<P: PageTable> MemorySet<P> for HostMemorySet<P> {
         );
     }
 
-    
     /// 将虚拟页号翻译成页表项
     fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)
@@ -97,7 +92,7 @@ impl<P: GuestPageTable> MemorySet<P> for GuestMemorySet<P> {
         permission: MapPermission,
     ) {
         self.push(
-            MapArea::new(start_va, end_va,  None, None, MapType::Framed, permission),
+            MapArea::new(start_va, end_va, None, None, MapType::Framed, permission),
             None,
         );
     }
@@ -122,7 +117,7 @@ impl<P: GuestPageTable> MemorySet<P> for GuestMemorySet<P> {
             PTEFlags::R | PTEFlags::X,
         );
     }
-    
+
     /// 将虚拟页号翻译成页表项
     fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
         self.page_table.translate(vpn)

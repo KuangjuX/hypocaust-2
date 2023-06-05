@@ -249,7 +249,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
                 let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
                 let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
-                hdebug!("va: [{:#x}: {:#x})", start_va.0, end_va.0);
+                info!("va: [{:#x}: {:#x})", start_va.0, end_va.0);
                 let mut map_perm = MapPermission::U;
                 let ph_flags = ph.flags();
                 if ph_flags.is_read() {
@@ -280,12 +280,9 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
                     MapType::Linear,
                     map_perm,
                 );
-                hdebug!(
+                info!(
                     "va: [{:#x}: {:#x}], pa: [{:#x}: {:#x}]",
-                    start_va.0,
-                    end_va.0,
-                    last_paddr as usize,
-                    paddr as usize
+                    start_va.0, end_va.0, last_paddr as usize, paddr as usize
                 );
                 last_paddr = paddr;
                 gpm.push(map_area, None);
@@ -307,12 +304,9 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             ),
             None,
         );
-        hdebug!(
+        info!(
             "guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})",
-            GUEST_START_VA,
-            guest_end_va,
-            GUEST_START_PA,
-            guest_end_pa
+            GUEST_START_VA, guest_end_va, GUEST_START_PA, guest_end_pa
         );
 
         gpm.map_trampoline();
@@ -395,7 +389,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
     pub fn new_guest_without_load(guest_machine: &MachineMeta) -> Self {
         let mut gpm = Self::new_guest_bare();
 
-        htracking!(
+        trace!(
             "map guest: [{:#x}: {:#x}]",
             guest_machine.physical_memory_offset,
             guest_machine.physical_memory_offset + guest_machine.physical_memory_size
@@ -413,7 +407,7 @@ impl<G: GuestPageTable> GuestMemorySet<G> {
             ),
             None,
         );
-        hdebug!(
+        info!(
             "guest va -> [{:#x}: {:#x}), guest pa -> [{:#x}: {:#x})",
             guest_machine.physical_memory_offset,
             guest_machine.physical_memory_offset + guest_machine.physical_memory_size,
@@ -678,7 +672,7 @@ pub fn remap_test() {
         .executable(),);
     unsafe { core::ptr::read(TRAMPOLINE as *const usize) };
     // 测试 guest ketnel
-    hdebug!("remap test passed!");
+    debug!("remap test passed!");
     drop(host_vmm);
 }
 

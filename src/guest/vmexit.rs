@@ -78,12 +78,12 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(
             ) {
                 inst = unsafe { core::ptr::read(host_inst_addr as *const usize) };
             } else {
-                herror!("inst addr: {:#x}", inst_addr);
+                error!("inst addr: {:#x}", inst_addr);
                 return Err(VmmError::TranslationError);
             }
         } else if inst == 0x3020 || inst == 0x3000 {
             // TODO: we should reinject this in the guest as a fault access
-            herror!("fault on 1st stage page table walk");
+            error!("fault on 1st stage page table walk");
             return Err(VmmError::PseudoInst);
         } else {
             // If htinst is valid and is not a pseudo instructon make sure
@@ -100,7 +100,7 @@ pub fn guest_page_fault_handler<P: PageTable, G: GuestPageTable>(
         }
         Ok(())
     } else {
-        herror!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
+        error!("addr: {:#x}, sepc: {:#x}", addr, ctx.sepc);
         Err(VmmError::DeviceNotFound)
         // todo: handle other device
     }
@@ -175,9 +175,9 @@ pub unsafe fn trap_handler() -> ! {
             if let Some(host_va) =
                 two_stage_translation(guest_id, ctx.sepc, vsatp::read().bits(), gpm)
             {
-                herror!("host va: {:#x}", host_va);
+                error!("host va: {:#x}", host_va);
             } else {
-                herror!("Fail to translate exception pc.");
+                error!("Fail to translate exception pc.");
             }
             panic!(
                 "InstructionGuestPageFault: sepc -> {:#x}, hgatp -> {:#x}",
@@ -192,7 +192,7 @@ pub unsafe fn trap_handler() -> ! {
             }
             host_vmm.guest_page_falut += 1;
             if host_vmm.guest_page_falut % 1000 == 0 {
-                htracking!(
+                trace!(
                     "guest page fault: {}, addr: {:#x}",
                     host_vmm.guest_page_falut,
                     htval::read() << 2
