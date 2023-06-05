@@ -35,34 +35,6 @@ macro_rules! println {
     }
 }
 
-// #[macro_export]
-// macro_rules! hdebug {
-//     ($fmt: literal $(, $($arg: tt)+)?) => {
-//         $crate::console::print(format_args!(concat!("[Hypervisor] ", $fmt, "\n") $(, $($arg)+)?));
-//     }
-// }
-
-// #[macro_export]
-// macro_rules! hwarning {
-//     ($fmt: literal $(, $($arg: tt)+)?) => {
-//         $crate::console::print(format_args!(concat!("[Warning] ", $fmt, "\n") $(, $($arg)+)?));
-//     }
-// }
-
-// #[macro_export]
-// macro_rules! htracking {
-//     ($fmt: literal $(, $($arg: tt)+)?) => {
-//         $crate::console::print(format_args!(concat!("\x1b[1;32m[Tracking] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
-//     }
-// }
-
-// #[macro_export]
-// macro_rules! herror {
-//     ($fmt: literal $(, $($arg: tt)+)?) => {
-//         $crate::console::print(format_args!(concat!("\x1b[1;31m[Error] ", $fmt, "\x1b[0m\n") $(, $($arg)+)?));
-//     }
-// }
-
 pub fn init() {
     static LOGGER: SimpleLogger = SimpleLogger;
     log::set_logger(&LOGGER).unwrap();
@@ -135,8 +107,9 @@ impl Log for SimpleLogger {
         let line = record.line().unwrap_or(0);
         let path = record.target();
         print(with_color!(
-            level_color,
-            "[{path}:{line}] {args}\n",
+            ColorCode::White,
+            "[{level} {path}:{line}] {args}\n",
+            level = with_color!(level_color, "{}", level),
             path = path,
             line = line,
             args = with_color!(args_color, "{}", record.args()),
