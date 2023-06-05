@@ -51,7 +51,7 @@ fn set_kernel_trap_entry() {
 
 fn set_user_trap_entry() {
     unsafe {
-        stvec::write(TRAMPOLINE as usize, stvec::TrapMode::Direct);
+        stvec::write(TRAMPOLINE, stvec::TrapMode::Direct);
     }
 }
 
@@ -210,9 +210,6 @@ pub unsafe fn trap_handler() -> ! {
             // disable timer interrupt
             sie::clear_stimer();
             host_vmm.timer_irq += 1;
-            // if host_vmm.timer_irq % 1000 == 0 {
-            //     htracking!("timer irq: {}", host_vmm.timer_irq);
-            // }
         }
         _ => forward_exception(ctx),
     }

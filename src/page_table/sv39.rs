@@ -120,11 +120,7 @@ impl PageTable for PageTableSv39 {
     fn translate_va(&self, va: usize) -> Option<usize> {
         let offset = va & 0xfff;
         let vpn = VirtPageNum::from(va >> 12);
-        if let Some(pte) = self.translate(vpn) {
-            Some((pte.ppn().0 << 12) + offset)
-        } else {
-            None
-        }
+        self.translate(vpn).map(|pte| (pte.ppn().0 << 12) + offset)
     }
 
     fn walk_page_table<R: Fn(usize) -> usize>(

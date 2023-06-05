@@ -167,12 +167,12 @@ use arrayvec::ArrayVec;
 use riscv::register::{hvip, sie};
 use spin::{Mutex, Once};
 
-use self::fdt::MachineMeta;
+// use self::fdt::MachineMeta;
 
 pub static mut HOST_VMM: Once<Mutex<HostVmm<PageTableSv39, PageTableSv39>>> = Once::new();
 
 pub struct HostVmm<P: PageTable, G: GuestPageTable> {
-    pub host_machine: MachineMeta,
+    // pub host_machine: MachineMeta,
     /// hypervisor memory
     pub hpm: HostMemorySet<P>,
     /// all guest structs
@@ -197,7 +197,7 @@ pub fn add_guest_queue(guest: Guest<PageTableSv39>) {
     host_vmm.guests[guest_id] = Some(guest);
 }
 
-pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineMeta) {
+pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>) {
     // hedeleg: delegate some synchronous exceptions
     hedeleg::write(
         hedeleg::INST_ADDR_MISALIGN
@@ -241,14 +241,14 @@ pub unsafe fn init_vmm(hpm: HostMemorySet<PageTableSv39>, host_machine: MachineM
             guests.push(None)
         }
 
-        let host_plic;
-        if let Some(plic) = host_machine.clone().plic {
-            host_plic = Some(PlicState::new(plic.base_address));
-        } else {
-            host_plic = None;
-        }
+        // let host_plic;
+        // if let Some(plic) = host_machine.clone().plic {
+        //     host_plic = Some(PlicState::new(plic.base_address));
+        // } else {
+        //     host_plic = None;
+        // }
+        let host_plic = Some(PlicState::new(0x0c00_0000));
         Mutex::new(HostVmm {
-            host_machine,
             hpm,
             guests,
             guest_id: 0,

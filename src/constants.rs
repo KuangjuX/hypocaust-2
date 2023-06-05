@@ -4,7 +4,6 @@ pub const USER_STACK_SIZE: usize = 4096 * 2;
 pub const KERNEL_STACK_SIZE: usize = 4096 * 4;
 pub const KERNEL_HEAP_SIZE: usize = 0x30_0000;
 
-
 pub const MAX_GUESTS: usize = 4;
 pub const MAX_GUEST_HARTS: usize = 16;
 /// Number of contexts for the PLIC. Value is twice the max number of harts because each hart will
@@ -270,7 +269,7 @@ pub mod csr {
     pub const mhpmcounter29h: usize = 0xb9d;
     pub const mhpmcounter30h: usize = 0xb9e;
     pub const mhpmcounter31h: usize = 0xb9f;
-    
+
     pub enum VirtualzationMode {
         Host = 0,
         Guest = 1,
@@ -280,7 +279,7 @@ pub mod csr {
     pub enum CpuMode {
         M = 0b11,
         S = 0b01,
-        U = 0b00
+        U = 0b00,
     }
 
     pub enum PrevisorMode {
@@ -288,7 +287,7 @@ pub mod csr {
         HS,
         M,
         VU,
-        VS
+        VS,
     }
 
     pub mod hedeleg {
@@ -346,7 +345,6 @@ pub mod csr {
         }
     }
 
-
     pub mod sip {
         /// software interrupts pending
         pub const SSIP: usize = 1 << 1;
@@ -355,7 +353,6 @@ pub mod csr {
         /// external interrupts pending
         pub const SEIP: usize = 1 << 9;
     }
-
 }
 
 pub mod riscv_regs {
@@ -471,5 +468,4 @@ pub mod riscv_regs {
             &mut self.0[GprIndex::A0 as usize..=GprIndex::A7 as usize]
         }
     }
-
 }

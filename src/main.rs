@@ -18,7 +18,7 @@ extern crate log;
 
 extern crate alloc;
 
-#[path = "boards/qemu.rs"]
+#[path = "boards/qemu_virt_riscv.rs"]
 mod board;
 
 #[macro_use]
@@ -58,6 +58,8 @@ static BOOT_STACK: [u8; BOOT_STACK_SIZE] = [0u8; BOOT_STACK_SIZE];
 #[export_name = "_start"]
 #[naked]
 /// hypervisor entrypoint
+///
+/// # Safety
 pub unsafe extern "C" fn start() -> ! {
     core::arch::asm!(
         // prepare stack
@@ -104,15 +106,14 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
 
         // initialize heap
         hyp_alloc::heap_init();
-        info!("host dtb: {:#x}", dtb);
-        let machine = hypervisor::fdt::MachineMeta::parse(dtb);
+        // let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // parse guest fdt
-        let guest_machine = hypervisor::fdt::MachineMeta::parse(0x9000_0000);
+        // let guest_machine = hypervisor::fdt::MachineMeta::parse(0x9000_0000);
         // initialize vmm
-        let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
-        init_vmm(hpm, machine);
+        let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm();
+        init_vmm(hpm);
         // create guest memory set
-        let gpm = GuestMemorySet::<PageTableSv39>::new_guest_without_load(&guest_machine);
+        let gpm = GuestMemorySet::<PageTableSv39>::setup_gpm();
 
         let mut host_vmm = HOST_VMM.get_mut().unwrap().lock();
         host_vmm.hpm.map_guest(GUEST_START_PA, GUEST_DEFAULT_SIZE);
@@ -124,7 +125,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         // memory translation test
         mm::remap_test();
         // create guest struct
-        let guest = Guest::new(0, gpm, guest_machine);
+        let guest = Guest::new(0, gpm);
         add_guest_queue(guest);
         info!("Start to run guest......");
         hart_entry_1()

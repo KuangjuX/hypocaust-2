@@ -1,5 +1,5 @@
 use crate::constants::layout::{GUEST_START_VA, TRAP_CONTEXT};
-use crate::hypervisor::fdt::MachineMeta;
+// use crate::hypervisor::fdt::MachineMeta;
 use crate::hypervisor::stack::hstack_alloc;
 use crate::mm::{GuestMemorySet, MemorySet};
 use vmexit::{trap_handler, TrapContext};
@@ -14,7 +14,7 @@ mod vcpu;
 pub mod vmexit;
 
 pub struct Guest<G: GuestPageTable> {
-    pub guest_machine: MachineMeta,
+    // pub guest_machine: MachineMeta,
     /// guest memory set
     pub gpm: GuestMemorySet<G>,
     /// guest id
@@ -24,7 +24,7 @@ pub struct Guest<G: GuestPageTable> {
 }
 
 impl<G: GuestPageTable> Guest<G> {
-    pub fn new(guest_id: usize, gpm: GuestMemorySet<G>, guest_machine: MachineMeta) -> Self {
+    pub fn new(guest_id: usize, gpm: GuestMemorySet<G>) -> Self {
         // 分配 hypervisor 内核栈
         let hstack = hstack_alloc(guest_id);
         let hstack_top = hstack.get_top();
@@ -43,7 +43,7 @@ impl<G: GuestPageTable> Guest<G> {
         Self {
             guest_id,
             gpm,
-            guest_machine,
+            // guest_machine,
             vcpu: VCpu::new(guest_id),
         }
     }
