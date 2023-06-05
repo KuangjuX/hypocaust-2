@@ -10,10 +10,12 @@ riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 buddy_system_allocator = "0.6"
 bitflags = "1.2.1"
 xmas-elf = "0.7.0"
-sbi-rt = "0.0.2"
+sbi-rt = {version = "0.0.2", features = ["integer-impls"] }
+sbi-spec = "0.0.6"
 spin = "0.9.4"
 riscv-decode = { git = "https://github.com/KuangjuX/riscv-decode.git" }
 fdt = { version = "0.1.5" }
+log = "0.4.18"
 arrayvec = { version = "0.7.2", default-features = false }
 memoffset = { version = ">=0.6.5", features = ["unstable_const"] }
 tock-registers = { version = "0.8.1" } 

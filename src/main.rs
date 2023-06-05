@@ -45,16 +45,16 @@ use crate::page_table::PageTableSv39;
 
 pub use error::{VmmError, VmmResult};
 
-#[link_section = ".dtb"]
-pub static GUEST_DTB: [u8; include_bytes!("../guest.dtb").len()] = *include_bytes!("../guest.dtb");
+// #[link_section = ".dtb"]
+// pub static GUEST_DTB: [u8; include_bytes!("../guest.dtb").len()] = *include_bytes!("../guest.dtb");
 
-#[link_section = ".initrd"]
-#[cfg(feature = "embed_guest_kernel")]
-static GUEST: [u8; include_bytes!("../guest.bin").len()] = *include_bytes!("../guest.bin");
+// #[link_section = ".initrd"]
+// #[cfg(feature = "embed_guest_kernel")]
+// static GUEST: [u8; include_bytes!("../guest.bin").len()] = *include_bytes!("../guest.bin");
 
-#[link_section = ".initrd"]
-#[cfg(not(feature = "embed_guest_kernel"))]
-static GUEST: [u8; 0] = [];
+// #[link_section = ".initrd"]
+// #[cfg(not(feature = "embed_guest_kernel"))]
+// static GUEST: [u8; 0] = [];
 
 /// hypervisor boot stack size
 const BOOT_STACK_SIZE: usize = 16 * PAGE_SIZE;
@@ -99,12 +99,6 @@ fn clear_bss() {
 unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
     if hart_id == 0 {
         clear_bss();
-        hdebug!(
-            "guest entry: {:#x}, guest size: {:#x}",
-            GUEST.as_ptr() as usize,
-            GUEST.len()
-        );
-        hdebug!("guest dtb addr: {:#x}", GUEST_DTB.as_ptr() as usize);
         hdebug!("Hello Hypocaust-2!");
         hdebug!("hart id: {}, dtb: {:#x}", hart_id, dtb);
         // detect h extension
@@ -121,8 +115,7 @@ unsafe fn hentry(hart_id: usize, dtb: usize) -> ! {
         hdebug!("host dtb: {:#x}", dtb);
         let machine = hypervisor::fdt::MachineMeta::parse(dtb);
         // parse guest fdt
-        hdebug!("guest dtb: {:#x}", GUEST_DTB.as_ptr() as usize);
-        let guest_machine = hypervisor::fdt::MachineMeta::parse(GUEST_DTB.as_ptr() as usize);
+        let guest_machine = hypervisor::fdt::MachineMeta::parse(0x9000_0000);
         // initialize vmm
         let hpm = HostMemorySet::<PageTableSv39>::new_host_vmm(&machine);
         init_vmm(hpm, machine);

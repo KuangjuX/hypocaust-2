@@ -47,16 +47,6 @@ SECTIONS
     ebss = .;
     ekernel = .;
 
-    . = 0x90000000;
-    .dtb : {
-        *(.dtb)
-    }
-
-    . = 0x90200000;
-    .initrd : {
-        *(.initrd)
-    }
-
     /DISCARD/ : {
         *(.eh_frame)
     }

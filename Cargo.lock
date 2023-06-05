@@ -54,12 +54,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cfg-if"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
-
-[[package]]
 name = "fdt"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -73,10 +67,12 @@ dependencies = [
  "bitflags",
  "buddy_system_allocator",
  "fdt",
+ "log",
  "memoffset",
  "riscv",
  "riscv-decode",
  "sbi-rt",
+ "sbi-spec 0.0.6",
  "spin 0.9.5",
  "tock-registers",
  "xmas-elf",
@@ -100,12 +96,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.17"
+version = "0.4.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
-dependencies = [
- "cfg-if",
-]
+checksum = "518ef76f2f87365916b142844c16d8fefd85039bc5699050210a7778ee1cd1de"
 
 [[package]]
 name = "memchr"
@@ -181,7 +174,7 @@ version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c113c53291db8ac141e01f43224ed488b8d6001ab66737b82e04695a43a42b7"
 dependencies = [
- "sbi-spec",
+ "sbi-spec 0.0.4",
 ]
 
 [[package]]
@@ -189,6 +182,15 @@ name = "sbi-spec"
 version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d4027cf9bb591a9fd0fc0e283be6165c5abe96cb73e9f0e24738c227f425377"
+dependencies = [
+ "static_assertions",
+]
+
+[[package]]
+name = "sbi-spec"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ebf26c3dc91286b60cf8ac92beed06259b42c1a111cef74e0a05348ddfca224"
 dependencies = [
  "static_assertions",
 ]
