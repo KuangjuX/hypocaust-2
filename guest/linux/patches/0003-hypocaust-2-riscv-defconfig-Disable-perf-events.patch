@@ -1,0 +1,28 @@
+From 1824297bc60a1b99b146fc6a98755d0b17b2713d Mon Sep 17 00:00:00 2001
+From: Tan En De <ende.tan@starfivetech.com>
+Date: Thu, 30 Nov 2023 12:26:29 +0800
+Subject: [hypocaust-2] riscv: defconfig: Disable perf events
+
+Currently, hypocaust-2 does not support PMU-related SBI call.
+Without this commit, the following error will be observed:
+```
+[hypervisor] Panicked at src/guest/sbi.rs:56 Unsupported SBI call id 0x504d55
+```
+
+Signed-off-by: Tan En De <ende.tan@starfivetech.com>
+---
+ arch/riscv/configs/defconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/riscv/configs/defconfig b/arch/riscv/configs/defconfig
+index 128dcf4c0814..491494ea7187 100644
+--- a/arch/riscv/configs/defconfig
++++ b/arch/riscv/configs/defconfig
+@@ -218,3 +218,4 @@ CONFIG_RCU_EQS_DEBUG=y
+ # CONFIG_FTRACE is not set
+ # CONFIG_RUNTIME_TESTING_MENU is not set
+ CONFIG_MEMTEST=y
++CONFIG_PERF_EVENTS=n
+-- 
+2.34.1
+

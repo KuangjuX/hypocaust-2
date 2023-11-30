@@ -52,6 +52,7 @@ $ export PATH=$PATH:/opt/riscv64/bin
 ```
 $ git clone https://github.com/torvalds/linux -b v6.2
 $ cd linux
+$ git am ${HYPOCAUST_2_DIR}/guest/linux/patches/*.patch
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- defconfig
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- menuconfig
 $ make ARCH=riscv CROSS_COMPILE=riscv64-unknown-linux-gnu- all -j8

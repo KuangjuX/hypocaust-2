@@ -1,0 +1,51 @@
+From a9800728f4d46805f403e8f6253c4951ff94ad01 Mon Sep 17 00:00:00 2001
+From: Tan En De <ende.tan@starfivetech.com>
+Date: Thu, 30 Nov 2023 11:33:19 +0800
+Subject: [hypocaust-2] riscv: mm: Disable l4 and l5 page table
+
+Currently, hypocaust-2 does not support l4 and l5 page table.
+Without this commit, the following error will be observed:
+```
+[Error] inst addr: 0xffffffff804538d0
+[hypervisor] Panicked at src/guest/vmexit.rs:144 err: TranslationError
+```
+
+Signed-off-by: Tan En De <ende.tan@starfivetech.com>
+---
+ arch/riscv/mm/init.c | 20 +++++++++++---------
+ 1 file changed, 11 insertions(+), 9 deletions(-)
+
+diff --git a/arch/riscv/mm/init.c b/arch/riscv/mm/init.c
+index 478d6763a01a..edcafd96c156 100644
+--- a/arch/riscv/mm/init.c
++++ b/arch/riscv/mm/init.c
+@@ -785,15 +785,17 @@ static __init void set_satp_mode(void)
+ 	hw_satp = csr_swap(CSR_SATP, 0ULL);
+ 	local_flush_tlb_all();
+ 
+-	if (hw_satp != identity_satp) {
+-		if (!check_l4) {
+-			disable_pgtable_l5();
+-			check_l4 = true;
+-			memset(early_pg_dir, 0, PAGE_SIZE);
+-			goto retry;
+-		}
+-		disable_pgtable_l4();
+-	}
++	/* if (hw_satp != identity_satp) { */
++	/* 	if (!check_l4) { */
++	/* 		disable_pgtable_l5(); */
++	/* 		check_l4 = true; */
++	/* 		memset(early_pg_dir, 0, PAGE_SIZE); */
++	/* 		goto retry; */
++	/* 	} */
++	/* 	disable_pgtable_l4(); */
++	/* } */
++	disable_pgtable_l5();
++	disable_pgtable_l4();
+ 
+ 	memset(early_pg_dir, 0, PAGE_SIZE);
+ 	memset(early_p4d, 0, PAGE_SIZE);
+-- 
+2.34.1
+
