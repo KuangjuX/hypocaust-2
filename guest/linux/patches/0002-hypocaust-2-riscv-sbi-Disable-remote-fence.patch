@@ -1,0 +1,45 @@
+From 3ae263a264752ffc937cd176812bf0c04e0abeae Mon Sep 17 00:00:00 2001
+From: Tan En De <ende.tan@starfivetech.com>
+Date: Thu, 30 Nov 2023 12:20:56 +0800
+Subject: [hypocaust-2] riscv: sbi: Disable remote fence
+
+Currently, hypocaust-2 does not support remote fence.
+Without this commit, the following error will happen:
+```
+[hypervisor] Panicked at src/guest/sbi.rs:56 Unsupported SBI call id 0x52464e43
+```
+
+Signed-off-by: Tan En De <ende.tan@starfivetech.com>
+---
+ arch/riscv/kernel/sbi.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/riscv/kernel/sbi.c b/arch/riscv/kernel/sbi.c
+index 5c87db8fdff2..c4a8fe7b5e69 100644
+--- a/arch/riscv/kernel/sbi.c
++++ b/arch/riscv/kernel/sbi.c
+@@ -228,8 +228,8 @@ static int __sbi_rfence_v01(int fid, const struct cpumask *cpu_mask,
+ 			    unsigned long start, unsigned long size,
+ 			    unsigned long arg4, unsigned long arg5)
+ {
+-	pr_warn("remote fence extension is not available in SBI v%lu.%lu\n",
+-		sbi_major_version(), sbi_minor_version());
++	/* pr_warn("remote fence extension is not available in SBI v%lu.%lu\n", */
++	/* 	sbi_major_version(), sbi_minor_version()); */
+ 
+ 	return 0;
+ }
+@@ -678,8 +678,8 @@ void __init sbi_init(void)
+ 			__sbi_send_ipi	= __sbi_send_ipi_v01;
+ 		}
+ 		if (sbi_probe_extension(SBI_EXT_RFENCE) > 0) {
+-			__sbi_rfence	= __sbi_rfence_v02;
+-			pr_info("SBI RFENCE extension detected\n");
++			__sbi_rfence	= __sbi_rfence_v01;
++			/* pr_info("SBI RFENCE extension detected\n"); */
+ 		} else {
+ 			__sbi_rfence	= __sbi_rfence_v01;
+ 		}
+-- 
+2.34.1
+
