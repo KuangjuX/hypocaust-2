@@ -8,7 +8,8 @@
     core_intrinsics,
     naked_functions,
     asm_const,
-    stdsimd
+    stdsimd,
+    riscv_ext_intrinsics
 )]
 
 #[macro_use]
